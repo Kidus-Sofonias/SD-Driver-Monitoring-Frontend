@@ -54,6 +54,46 @@ Or start the Expo dev server:
 npm start
 ```
 
+## Build for Android and iOS
+
+This project is configured for Expo EAS builds.
+
+Before building, replace the placeholder backend URL in `eas.json` with your deployed backend:
+
+`https://YOUR-BACKEND.onrender.com/api/v1`
+
+Install the EAS CLI and log in:
+
+```powershell
+npm install -g eas-cli
+eas login
+```
+
+Create an Android APK for testing:
+
+```powershell
+npm run build:android:apk
+```
+
+Create an Android AAB for Play Store submission:
+
+```powershell
+npm run build:android:aab
+```
+
+Create an iOS build:
+
+```powershell
+npm run build:ios
+```
+
+Notes:
+
+- Android APK is best for direct tester installs.
+- Android AAB is best for Google Play.
+- iOS device/TestFlight builds require an Apple Developer account.
+- Expo will prompt you through signing credentials the first time.
+
 If Expo Go on Android shows `failed to download ... java.io.IOException`, use:
 
 ```powershell

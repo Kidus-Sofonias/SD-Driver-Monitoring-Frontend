@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "scheme": "safedrivingmobile",
     "plugins": [
       [
         "expo-location",
@@ -16,6 +17,9 @@
     ],
     "android": {
       "package": "com.safe.driving.mobile"
+    },
+    "ios": {
+      "bundleIdentifier": "com.safe.driving.mobile"
     }
   }
 }

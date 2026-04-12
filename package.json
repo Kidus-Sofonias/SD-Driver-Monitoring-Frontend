@@ -13,7 +13,10 @@
     "start:usb": "npm run usb:reverse && npm run start:localhost:clear",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:android:apk": "eas build --platform android --profile preview",
+    "build:android:aab": "eas build --platform android --profile production",
+    "build:ios": "eas build --platform ios --profile production"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
