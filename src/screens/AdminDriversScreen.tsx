@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -18,12 +18,14 @@ type Props = {
 export function AdminDriversScreen({ onOpenDriver }: Props) {
   const colors = useThemeColors();
   const { t } = useI18n();
+  const { width } = useWindowDimensions();
   const { adminDrivers, reviewItems, busy, deleteAdminDriver, saveAdminDriverCredentials } = useApp();
   const [editingDriver, setEditingDriver] = useState<AdminDriver | null>(null);
   const [deletingDriver, setDeletingDriver] = useState<AdminDriver | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const isCompact = width < 720;
 
   const driverPressure = useMemo(() => {
     const byDriverId = new Map<string, { pendingReviews: number; highRiskTrips: number; averageScore: number; scoreCount: number }>();
@@ -100,12 +102,12 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
       </Card>
 
       <Card>
-        <View style={styles.headerRow}>
-          <View style={styles.headerCopy}>
+        <View style={[styles.headerRow, isCompact ? styles.headerRowStack : null]}>
+          <View style={[styles.headerCopy, isCompact ? styles.headerCopyStack : null]}>
             <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("all_drivers")}</Text>
             <Text style={[styles.title, { color: colors.heading }]}>{t("active_accounts", { count: formatWholeNumber(adminDrivers.length) })}</Text>
           </View>
-          <View style={styles.searchWrap}>
+          <View style={[styles.searchWrap, isCompact ? styles.searchWrapStack : null]}>
             <TextField
               label={t("search_drivers")}
               value={searchQuery}
@@ -249,14 +251,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.md,
+    flexWrap: "wrap",
+  },
+  headerRowStack: {
+    flexDirection: "column",
+    alignItems: "stretch",
   },
   headerCopy: {
     gap: spacing.xs,
     flex: 1,
+    minWidth: 0,
+  },
+  headerCopyStack: {
+    width: "100%",
   },
   searchWrap: {
     width: "100%",
     maxWidth: 320,
+    minWidth: 220,
+  },
+  searchWrapStack: {
+    maxWidth: "100%",
+    minWidth: 0,
   },
   resultsMeta: {
     fontSize: type.caption,
