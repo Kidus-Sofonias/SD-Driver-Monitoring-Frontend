@@ -1,4 +1,4 @@
-import { DEFAULT_API_BASE_URL } from "../config/constants";
+import { DEFAULT_API_BASE_URL, normalizeApiBaseUrl } from "../config/constants";
 import { NativeModules, Platform } from "react-native";
 import type {
   AdminDriver,
@@ -27,7 +27,7 @@ const REQUEST_TIMEOUT_MS = 15000;
 const LOCALHOST_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 function normalizeBaseUrl(url: string) {
-  return url.trim().replace(/\/+$/, "");
+  return normalizeApiBaseUrl(url);
 }
 
 function extractHost(url: string) {

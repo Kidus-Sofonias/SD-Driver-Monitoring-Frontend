@@ -1,14 +1,16 @@
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { DEFAULT_API_BASE_URL } from "../config/constants";
+import { DEFAULT_API_BASE_URL, normalizeApiBaseUrl } from "../config/constants";
 import type { LanguageMode } from "../i18n";
 import * as api from "../lib/api";
 import {
   loadDismissedPendingTripIds,
+  loadApiBaseUrl,
   loadLanguageMode,
   loadSession,
   loadThemeMode,
   saveDismissedPendingTripIds,
+  saveApiBaseUrl,
   saveLanguageMode,
   saveSession,
   saveThemeMode
@@ -207,13 +209,14 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   async function bootstrap() {
     try {
-      const [rawStoredSession, storedThemeMode, storedLanguageMode, dismissedPendingTripIds] = await Promise.all([
+      const [rawStoredSession, storedApiBaseUrl, storedThemeMode, storedLanguageMode, dismissedPendingTripIds] = await Promise.all([
         loadSession(),
+        loadApiBaseUrl(),
         loadThemeMode(),
         loadLanguageMode(),
         loadDismissedPendingTripIds()
       ]);
-      const apiBaseUrl = DEFAULT_API_BASE_URL;
+      const apiBaseUrl = normalizeApiBaseUrl(storedApiBaseUrl || DEFAULT_API_BASE_URL);
       const themeMode = storedThemeMode || "light";
       const languageMode = storedLanguageMode || "en";
       const session = rawStoredSession;
@@ -350,7 +353,8 @@ export function AppProvider({ children }: PropsWithChildren) {
   }
 
   async function setApiUrl(url: string) {
-    const normalized = url.trim().replace(/\/+$/, "");
+    const normalized = normalizeApiBaseUrl(url);
+    await saveApiBaseUrl(normalized);
     setState((current) => ({ ...current, apiBaseUrl: normalized }));
   }
 
