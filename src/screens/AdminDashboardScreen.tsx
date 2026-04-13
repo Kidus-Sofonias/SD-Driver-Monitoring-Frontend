@@ -2,8 +2,10 @@ import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
+import { FloatingOrb, Reveal } from "../components/Motion";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
+import { useI18n } from "../i18n";
 import { formatPercent, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { radius, spacing, type } from "../theme/tokens";
@@ -28,6 +30,7 @@ type DriverAggregate = {
 export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
+  const { t, translateDynamic } = useI18n();
   const { reviewItems } = useApp();
   const isWide = width >= 1080;
 
@@ -49,7 +52,7 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
 
     const driverMap = new Map<string, DriverAggregate>();
     for (const item of reviewItems) {
-      const email = item.driver_email || "Unknown driver";
+      const email = item.driver_email || translateDynamic("unknown");
       const current = driverMap.get(email) || {
         email,
         tripCount: 0,
@@ -109,46 +112,52 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
       avgScore,
       avgConfidence,
     };
-  }, [reviewItems]);
+  }, [reviewItems, translateDynamic]);
 
   const riskSegments = [
-    { label: "Low", value: analytics.riskCounts.low, color: colors.lowRisk },
-    { label: "Medium", value: analytics.riskCounts.medium, color: colors.caution },
-    { label: "High", value: analytics.riskCounts.high, color: colors.highRisk },
+    { label: translateDynamic("low"), value: analytics.riskCounts.low, color: colors.lowRisk },
+    { label: translateDynamic("medium"), value: analytics.riskCounts.medium, color: colors.caution },
+    { label: translateDynamic("high"), value: analytics.riskCounts.high, color: colors.highRisk },
   ];
   const maxBucket = Math.max(1, ...analytics.scoreBuckets.map((bucket) => bucket.count));
 
   return (
     <View style={styles.root}>
       <View style={[styles.hero, { backgroundColor: colors.darkSurfaceDeep }]}>
+        <FloatingOrb style={styles.heroOrbPrimary} duration={9000} xRange={[-9, 11]} yRange={[-10, 10]} />
+        <FloatingOrb style={styles.heroOrbSecondary} duration={11800} xRange={[-8, 10]} yRange={[-8, 14]} />
         <View style={styles.heroCopy}>
-          <Text style={styles.heroEyebrow}>ADMIN OPS</Text>
-          <Text style={[styles.heroTitle, { color: colors.mist }]}>Driver safety command</Text>
-          <Text style={styles.heroText}>
-            Review fleet risk, spot the strongest drivers, and jump straight into the trips that need human attention.
-          </Text>
+          <Reveal delay={30}>
+            <Text style={styles.heroEyebrow}>{t("admin_ops")}</Text>
+          </Reveal>
+          <Reveal delay={95}>
+            <Text style={[styles.heroTitle, { color: colors.mist }]}>{t("driver_safety_command")}</Text>
+          </Reveal>
+          <Reveal delay={160}>
+            <Text style={styles.heroText}>{t("admin_dashboard_intro")}</Text>
+          </Reveal>
         </View>
         <View style={[styles.heroStats, !isWide ? styles.heroStatsStack : null]}>
           {[
-            { label: "Trips tracked", value: String(analytics.totalTrips) },
-            { label: "Need review", value: String(analytics.pendingReviews) },
-            { label: "Average score", value: analytics.avgScore ? String(analytics.avgScore) : "--" },
-            { label: "Average confidence", value: formatPercent(analytics.avgConfidence) },
-          ].map((item) => (
-            <View key={item.label} style={styles.heroStat}>
+            { label: t("trips_tracked"), value: String(analytics.totalTrips) },
+            { label: t("need_review"), value: String(analytics.pendingReviews) },
+            { label: t("average_score"), value: analytics.avgScore ? String(analytics.avgScore) : "--" },
+            { label: t("average_confidence"), value: formatPercent(analytics.avgConfidence) },
+          ].map((item, index) => (
+            <Reveal key={item.label} delay={230 + index * 70} style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{item.label}</Text>
               <Text style={styles.heroStatValue}>{item.value}</Text>
-            </View>
+            </Reveal>
           ))}
         </View>
       </View>
 
       <View style={[styles.grid, isWide ? styles.gridWide : null]}>
-        <Card style={styles.flexCard}>
+        <Card style={styles.flexCard} delay={120}>
           <View style={styles.cardHeader}>
             <View>
-              <Text style={[styles.eyebrow, { color: colors.muted }]}>Best driver</Text>
-              <Text style={[styles.title, { color: colors.heading }]}>Top performer</Text>
+              <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("best_driver")}</Text>
+              <Text style={[styles.title, { color: colors.heading }]}>{t("top_performer")}</Text>
             </View>
             <StatusPill label={analytics.bestDriver ? `${Math.round(analytics.bestDriver.avgScore)}` : "--"} tone="good" />
           </View>
@@ -156,24 +165,24 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
             <>
               <Text style={[styles.driverName, { color: colors.heading }]}>{analytics.bestDriver.email}</Text>
               <View style={styles.statRow}>
-                <StatusPill label={`${analytics.bestDriver.tripCount} trips`} tone="neutral" />
-                <StatusPill label={`${formatPercent(analytics.bestDriver.confidenceAvg)} confidence`} tone="neutral" />
-                <StatusPill label={`${analytics.bestDriver.highRiskTrips} high risk`} tone={analytics.bestDriver.highRiskTrips ? "warn" : "good"} />
+                <StatusPill label={`${analytics.bestDriver.tripCount} ${t("trips_word")}`} tone="neutral" />
+                <StatusPill label={`${formatPercent(analytics.bestDriver.confidenceAvg)} ${t("confidence").toLowerCase()}`} tone="neutral" />
+                <StatusPill label={`${analytics.bestDriver.highRiskTrips} ${t("high_risk")}`} tone={analytics.bestDriver.highRiskTrips ? "warn" : "good"} />
               </View>
-              <PrimaryButton label="Open latest trip" onPress={() => void onOpenTrip(analytics.bestDriver!.latestTripId)} variant="secondary" />
+              <PrimaryButton label={t("open_latest_trip")} onPress={() => void onOpenTrip(analytics.bestDriver!.latestTripId)} variant="secondary" />
             </>
           ) : (
-            <Text style={[styles.body, { color: colors.muted }]}>Top performer appears after a driver has at least 5 finalized trips.</Text>
+            <Text style={[styles.body, { color: colors.muted }]}>{t("top_performer_help")}</Text>
           )}
         </Card>
 
-        <Card style={styles.flexCard}>
+        <Card style={styles.flexCard} delay={200}>
           <View style={styles.cardHeader}>
             <View>
-              <Text style={[styles.eyebrow, { color: colors.muted }]}>Drivers to watch</Text>
-              <Text style={[styles.title, { color: colors.heading }]}>Attention queue</Text>
+              <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("drivers_to_watch")}</Text>
+              <Text style={[styles.title, { color: colors.heading }]}>{t("attention_queue")}</Text>
             </View>
-            <PrimaryButton label="Open review" onPress={onOpenReview} variant="secondary" />
+            <PrimaryButton label={t("open_review")} onPress={onOpenReview} variant="secondary" />
           </View>
           <View style={styles.listStack}>
             {analytics.watchDrivers.length ? (
@@ -182,23 +191,23 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
                   <View style={styles.driverMeta}>
                     <Text style={[styles.driverLabel, { color: colors.heading }]}>{driver.email}</Text>
                     <Text style={[styles.driverSubtle, { color: colors.muted }]}>
-                      {driver.pendingReviews} pending reviews, {driver.highRiskTrips} high-risk trips
+                      {t("pending_reviews_high_risk", { pending: driver.pendingReviews, highRisk: driver.highRiskTrips })}
                     </Text>
                   </View>
                   <StatusPill label={`${Math.round(driver.avgScore)}`} tone={driver.avgScore >= 80 ? "good" : driver.avgScore >= 55 ? "warn" : "bad"} />
                 </View>
               ))
             ) : (
-              <Text style={[styles.body, { color: colors.muted }]}>No watchlist pressure yet.</Text>
+              <Text style={[styles.body, { color: colors.muted }]}>{t("no_watchlist_pressure")}</Text>
             )}
           </View>
         </Card>
       </View>
 
       <View style={[styles.grid, isWide ? styles.gridWide : null]}>
-        <Card style={styles.flexCard}>
-          <Text style={[styles.eyebrow, { color: colors.muted }]}>Risk mix</Text>
-          <Text style={[styles.title, { color: colors.heading }]}>Fleet risk breakdown</Text>
+        <Card style={styles.flexCard} delay={280}>
+          <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("risk_mix")}</Text>
+          <Text style={[styles.title, { color: colors.heading }]}>{t("fleet_risk_breakdown")}</Text>
           <View style={[styles.stackedBar, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
             {riskSegments.map((segment) => {
               const total = Math.max(1, analytics.totalTrips);
@@ -215,9 +224,9 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
           </View>
         </Card>
 
-        <Card style={styles.flexCard}>
-          <Text style={[styles.eyebrow, { color: colors.muted }]}>Score distribution</Text>
-          <Text style={[styles.title, { color: colors.heading }]}>Trips by score band</Text>
+        <Card style={styles.flexCard} delay={340}>
+          <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("score_distribution")}</Text>
+          <Text style={[styles.title, { color: colors.heading }]}>{t("trips_by_score_band")}</Text>
           <View style={styles.chartRow}>
             {analytics.scoreBuckets.map((bucket) => (
               <View key={bucket.label} style={styles.chartBarWrap}>
@@ -240,13 +249,13 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
         </Card>
       </View>
 
-      <Card>
+      <Card delay={420}>
         <View style={styles.cardHeader}>
           <View>
-            <Text style={[styles.eyebrow, { color: colors.muted }]}>Recent activity</Text>
-            <Text style={[styles.title, { color: colors.heading }]}>Trips that just landed</Text>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("recent_activity")}</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("trips_that_just_landed")}</Text>
           </View>
-          <StatusPill label={`${analytics.pendingReviews} waiting`} tone={analytics.pendingReviews ? "warn" : "good"} />
+          <StatusPill label={t("waiting", { count: analytics.pendingReviews })} tone={analytics.pendingReviews ? "warn" : "good"} />
         </View>
         <View style={styles.listStack}>
           {analytics.recentTrips.length ? (
@@ -255,7 +264,7 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
                 <View style={[styles.recentRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
                   <View style={styles.driverMeta}>
                     <Text style={[styles.driverLabel, { color: colors.heading }]}>{trip.driver_email || trip.trip_id}</Text>
-                    <Text style={[styles.driverSubtle, { color: colors.muted }]}>{trip.trip_id.slice(0, 8)}... • {trip.generated_event_count} events</Text>
+                    <Text style={[styles.driverSubtle, { color: colors.muted }]}>{trip.trip_id.slice(0, 8)}... • {trip.generated_event_count} {t("events").toLowerCase()}</Text>
                   </View>
                   <View style={styles.statRow}>
                     <StatusPill label={`${trip.score ?? "--"}`} tone="neutral" />
@@ -265,7 +274,7 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
               </Pressable>
             ))
           ) : (
-            <Text style={[styles.body, { color: colors.muted }]}>No finalized trips yet.</Text>
+            <Text style={[styles.body, { color: colors.muted }]}>{t("no_finalized_trips_yet")}</Text>
           )}
         </View>
       </Card>
@@ -281,6 +290,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.xxxl,
     gap: spacing.xl,
+    overflow: "hidden",
+    position: "relative",
   },
   heroCopy: {
     gap: spacing.md,
@@ -332,6 +343,24 @@ const styles = StyleSheet.create({
     color: "#F8FBFF",
     fontSize: type.title,
     fontWeight: "800",
+  },
+  heroOrbPrimary: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    top: -64,
+    right: -36,
+    backgroundColor: "rgba(88, 180, 214, 0.16)",
+  },
+  heroOrbSecondary: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 999,
+    left: -20,
+    bottom: -28,
+    backgroundColor: "rgba(255,255,255,0.09)",
   },
   grid: {
     gap: spacing.lg,

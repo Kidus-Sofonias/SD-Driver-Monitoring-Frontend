@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
+import { FloatingOrb, Reveal } from "../components/Motion";
 import { AnimatedScoreRing } from "../components/AnimatedScoreRing";
 import { MetricTile } from "../components/MetricTile";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -66,18 +67,28 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
   return (
     <View style={styles.root}>
       <View style={[styles.hero, isWide ? styles.heroWide : null, { backgroundColor: colors.darkSurfaceDeep }]}>
+        <FloatingOrb style={styles.heroOrbPrimary} duration={8600} xRange={[-10, 12]} yRange={[-10, 16]} />
+        <FloatingOrb style={styles.heroOrbSecondary} duration={11200} xRange={[-12, 8]} yRange={[-6, 12]} />
         <View style={[styles.heroCopy, isWide ? styles.heroCopyWide : null]}>
-          <View style={styles.heroBadge}>
-            <Text style={styles.heroEyebrow}>Driver Monitoring System</Text>
-          </View>
-          <Text style={[styles.heroTitle, { color: colors.mist }]}>Calm visibility for every trip</Text>
-          <Text style={styles.heroText}>{t("dashboard_intro")}</Text>
-          <View style={styles.heroActionRow}>
-            <View style={styles.heroActionButton}>
-              <PrimaryButton label={primaryActionLabel} onPress={primaryActionHandler} />
+          <Reveal delay={30}>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroEyebrow}>Driver Monitoring System</Text>
             </View>
-            <StatusPill label={tripStateLabel} tone={tripStateTone} />
-          </View>
+          </Reveal>
+          <Reveal delay={100}>
+            <Text style={[styles.heroTitle, { color: colors.mist }]}>Calm visibility for every trip</Text>
+          </Reveal>
+          <Reveal delay={160}>
+            <Text style={styles.heroText}>{t("dashboard_intro")}</Text>
+          </Reveal>
+          <Reveal delay={230}>
+            <View style={styles.heroActionRow}>
+              <View style={styles.heroActionButton}>
+                <PrimaryButton label={primaryActionLabel} onPress={primaryActionHandler} />
+              </View>
+              <StatusPill label={tripStateLabel} tone={tripStateTone} />
+            </View>
+          </Reveal>
         </View>
         <View style={[styles.heroStatsGrid, isWide ? styles.heroStatsGridWide : styles.heroStatsGridStack]}>
           {[
@@ -85,17 +96,17 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
             [t("risk"), translateDynamic(titleCase(latestResult?.risk_level || latestCompletedTrip?.risk_level || "not available"))],
             [t("confidence"), formatPercent(latestResult?.confidence ?? latestCompletedTrip?.confidence)],
             [t("events"), String(latestResult?.events_generated || latestResult?.events?.length || latestReview?.generated_event_count || 0)],
-          ].map(([label, value]) => (
-            <View key={label} style={[styles.heroStat, !isWide ? styles.heroStatStack : null]}>
+          ].map(([label, value], index) => (
+            <Reveal key={label} delay={280 + index * 70} style={[styles.heroStat, !isWide ? styles.heroStatStack : null]}>
               <Text style={styles.heroStatLabel}>{label}</Text>
               <Text style={styles.heroStatValue}>{value}</Text>
-            </View>
+            </Reveal>
           ))}
         </View>
       </View>
 
       <View style={[styles.row, isWide ? styles.rowWide : null]}>
-        <Card style={isWide ? styles.flexCard : null}>
+        <Card style={isWide ? styles.flexCard : null} delay={120}>
           <View style={styles.cardHeader}>
             <View>
               <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("trip_lifecycle")}</Text>
@@ -152,7 +163,7 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
           </View>
         </Card>
 
-        <Card style={isWide ? styles.flexCard : null}>
+        <Card style={isWide ? styles.flexCard : null} delay={200}>
           <View style={styles.cardHeader}>
             <View>
               <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("previous_finalized_trip")}</Text>
@@ -201,7 +212,7 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
       </View>
 
       <View style={[styles.row, isWide ? styles.rowWide : null]}>
-        <Card style={isWide ? styles.flexCard : null}>
+        <Card style={isWide ? styles.flexCard : null} delay={260}>
           <View style={styles.cardHeader}>
             <View>
               <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("recent_trips")}</Text>
@@ -239,7 +250,7 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
           </View>
         </Card>
 
-        <Card style={isWide ? styles.flexCard : null}>
+        <Card style={isWide ? styles.flexCard : null} delay={320}>
           <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
           <Text style={[styles.cardTitle, { color: colors.heading }]}>{t("latest_event_summary")}</Text>
           <View style={styles.listStack}>
@@ -275,7 +286,9 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: radius.xl,
     padding: spacing.xxxl,
-    gap: spacing.xl
+    gap: spacing.xl,
+    overflow: "hidden",
+    position: "relative",
   },
   heroWide: {
     flexDirection: "row",
@@ -364,6 +377,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontFamily: fontFamily.display,
     marginTop: spacing.xs
+  },
+  heroOrbPrimary: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    top: -56,
+    right: -42,
+    backgroundColor: "rgba(80, 162, 196, 0.18)",
+  },
+  heroOrbSecondary: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 999,
+    bottom: -38,
+    left: -28,
+    backgroundColor: "rgba(255,255,255,0.09)",
   },
   row: {
     gap: spacing.lg

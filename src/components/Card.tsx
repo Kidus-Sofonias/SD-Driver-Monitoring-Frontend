@@ -6,31 +6,42 @@ import { useThemeColors } from "../theme/useTheme";
 
 type Props = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
+  delay?: number;
 }>;
 
-export function Card({ children, style }: Props) {
+export function Card({ children, style, delay = 0 }: Props) {
   const colors = useThemeColors();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(18)).current;
+  const scale = useRef(new Animated.Value(0.975)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 260,
+        duration: 360,
+        delay,
         useNativeDriver: true,
       }),
       Animated.spring(translateY, {
         toValue: 0,
+        delay,
         friction: 9,
         tension: 70,
         useNativeDriver: true,
       }),
+      Animated.spring(scale, {
+        toValue: 1,
+        delay,
+        friction: 8,
+        tension: 74,
+        useNativeDriver: true,
+      }),
     ]).start();
-  }, [opacity, translateY]);
+  }, [delay, opacity, scale, translateY]);
 
   return (
-    <Animated.View style={[styles.card, dynamicStyles(colors).card, style, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.card, dynamicStyles(colors).card, style, { opacity, transform: [{ translateY }, { scale }] }]}>
       {children}
     </Animated.View>
   );

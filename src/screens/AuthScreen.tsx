@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
+import { FloatingOrb, Reveal } from "../components/Motion";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { TextField } from "../components/TextField";
 import { useI18n } from "../i18n";
@@ -30,29 +31,37 @@ export function AuthScreen() {
   return (
     <View style={[styles.root, isWide ? styles.rootWide : null]}>
       <View style={[styles.hero, isWide ? styles.heroWide : null, { backgroundColor: colors.darkSurfaceDeep }]}>
-        <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.12)" }]}>
-          <Text style={styles.eyebrow}>Driver Monitoring System</Text>
-        </View>
-        <Text style={[styles.title, { color: colors.mist }]}>{t("sign_in_start")}</Text>
-        <Text style={[styles.subtitle, { color: "#D3E2F3" }]}>{t("auth_intro")}</Text>
+        <FloatingOrb style={styles.heroOrbPrimary} duration={7600} xRange={[-6, 10]} yRange={[-12, 8]} />
+        <FloatingOrb style={styles.heroOrbSecondary} duration={9800} xRange={[-10, 8]} yRange={[-6, 12]} />
+        <Reveal delay={30}>
+          <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.12)" }]}>
+            <Text style={styles.eyebrow}>Driver Monitoring System</Text>
+          </View>
+        </Reveal>
+        <Reveal delay={90}>
+          <Text style={[styles.title, { color: colors.mist }]}>{t("sign_in_start")}</Text>
+        </Reveal>
+        <Reveal delay={150}>
+          <Text style={[styles.subtitle, { color: "#D3E2F3" }]}>{t("auth_intro")}</Text>
+        </Reveal>
         <View style={styles.heroStats}>
-          <View style={styles.heroStat}>
+          <Reveal delay={210} style={styles.heroStat}>
             <Text style={styles.heroStatLabel}>Live trips</Text>
             <Text style={styles.heroStatValue}>Realtime</Text>
-          </View>
-          <View style={styles.heroStat}>
+          </Reveal>
+          <Reveal delay={280} style={styles.heroStat}>
             <Text style={styles.heroStatLabel}>Safety review</Text>
             <Text style={styles.heroStatValue}>Centralized</Text>
-          </View>
-          <View style={styles.heroStat}>
+          </Reveal>
+          <Reveal delay={350} style={styles.heroStat}>
             <Text style={styles.heroStatLabel}>Backend health</Text>
             <Text style={styles.heroStatValue}>{healthLabel}</Text>
-          </View>
+          </Reveal>
         </View>
       </View>
 
       <View style={[styles.formColumn, isWide ? styles.formColumnWide : null]}>
-        <Card>
+        <Card delay={110}>
           <Text style={[styles.formEyebrow, { color: colors.muted }]}>Access</Text>
           <Text style={[styles.formTitle, { color: colors.heading }]}>Sign in to continue</Text>
           <View style={styles.modeRow}>
@@ -83,7 +92,7 @@ export function AuthScreen() {
           />
         </Card>
 
-        <Card>
+        <Card delay={190}>
           <Text style={[styles.sectionTitle, { color: colors.heading }]}>Workspace</Text>
           <Text style={[styles.connectionMeta, { color: colors.muted }]}>Choose the display mode and language for this session.</Text>
           <Text style={[styles.sectionLabel, { color: colors.muted }]}>{t("theme")}</Text>
@@ -99,7 +108,7 @@ export function AuthScreen() {
           </View>
         </Card>
 
-        <Card>
+        <Card delay={270}>
           <Text style={[styles.sectionTitle, { color: colors.heading }]}>{t("backend_status")}</Text>
           <Text style={[styles.connectionMeta, { color: colors.muted }]}>{t("backend_hidden")}</Text>
           <View style={[styles.healthPanel, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
@@ -123,7 +132,9 @@ const styles = StyleSheet.create({
   hero: {
     gap: spacing.md,
     borderRadius: radius.xl,
-    padding: spacing.xxl
+    padding: spacing.xxl,
+    overflow: "hidden",
+    position: "relative",
   },
   heroWide: {
     minHeight: 0,
@@ -185,6 +196,24 @@ const styles = StyleSheet.create({
     fontSize: type.section,
     fontWeight: "800",
     fontFamily: fontFamily.heading
+  },
+  heroOrbPrimary: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: 999,
+    right: -36,
+    top: -30,
+    backgroundColor: "rgba(108, 188, 221, 0.18)",
+  },
+  heroOrbSecondary: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 999,
+    left: -26,
+    bottom: -24,
+    backgroundColor: "rgba(255, 255, 255, 0.10)",
   },
   formColumn: {
     flex: 1,

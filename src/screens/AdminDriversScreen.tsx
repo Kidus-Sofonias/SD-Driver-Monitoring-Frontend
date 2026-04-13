@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { TextField } from "../components/TextField";
+import { useI18n } from "../i18n";
 import { formatDateTime, formatWholeNumber } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import type { AdminDriver } from "../types/api";
@@ -16,9 +17,11 @@ type Props = {
 
 export function AdminDriversScreen({ onOpenDriver }: Props) {
   const colors = useThemeColors();
+  const { t } = useI18n();
   const { adminDrivers, reviewItems, busy, deleteAdminDriver, saveAdminDriverCredentials } = useApp();
   const [editingDriver, setEditingDriver] = useState<AdminDriver | null>(null);
   const [deletingDriver, setDeletingDriver] = useState<AdminDriver | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -49,6 +52,14 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
     }
     return byDriverId;
   }, [reviewItems]);
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const visibleDrivers = useMemo(() => {
+    if (!normalizedSearch) {
+      return adminDrivers;
+    }
+    return adminDrivers.filter((driver) => driver.email.toLowerCase().includes(normalizedSearch));
+  }, [adminDrivers, normalizedSearch]);
 
   function openEdit(driver: AdminDriver) {
     setEditingDriver(driver);
@@ -83,24 +94,33 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
   return (
     <View style={styles.root}>
       <Card style={[styles.hero, { backgroundColor: colors.darkSurfaceDeep }]}>
-        <Text style={styles.heroEyebrow}>DRIVER DIRECTORY</Text>
-        <Text style={styles.heroTitle}>Manage fleet access</Text>
-        <Text style={styles.heroText}>
-          Open any driver record to inspect their trips, rotate credentials, or remove access.
-        </Text>
+        <Text style={styles.heroEyebrow}>{t("driver_directory")}</Text>
+        <Text style={styles.heroTitle}>{t("manage_fleet_access")}</Text>
+        <Text style={styles.heroText}>{t("driver_directory_intro")}</Text>
       </Card>
 
       <Card>
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
-            <Text style={[styles.eyebrow, { color: colors.muted }]}>All drivers</Text>
-            <Text style={[styles.title, { color: colors.heading }]}>{formatWholeNumber(adminDrivers.length)} active accounts</Text>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("all_drivers")}</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("active_accounts", { count: formatWholeNumber(adminDrivers.length) })}</Text>
+          </View>
+          <View style={styles.searchWrap}>
+            <TextField
+              label={t("search_drivers")}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t("search_driver_placeholder")}
+            />
           </View>
         </View>
+        <Text style={[styles.resultsMeta, { color: colors.muted }]}>
+          {t("drivers_matching", { count: formatWholeNumber(visibleDrivers.length) })}
+        </Text>
 
         <View style={styles.list}>
-          {adminDrivers.length ? (
-            adminDrivers.map((driver) => {
+          {visibleDrivers.length ? (
+            visibleDrivers.map((driver) => {
               const pressure = driverPressure.get(driver.id);
               return (
                 <View key={driver.id} style={[styles.driverRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
@@ -109,13 +129,16 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
                       <Text style={[styles.driverEmail, { color: colors.heading }]}>{driver.email}</Text>
                     </Pressable>
                     <Text style={[styles.driverSubtle, { color: colors.muted }]}>
-                      {driver.trip_count} trips recorded
+                      {t("trips_recorded", { count: driver.trip_count })}
                     </Text>
                     <Text style={[styles.driverSubtle, { color: colors.muted }]}>
-                      Last trip: {formatDateTime(driver.latest_trip_at)}
+                      {t("last_trip", { time: formatDateTime(driver.latest_trip_at) })}
                     </Text>
                     <Text style={[styles.driverSubtle, { color: colors.text }]}>
-                      {pressure?.pendingReviews ?? 0} pending reviews, {pressure?.highRiskTrips ?? 0} high-risk trips
+                      {t("pending_reviews_high_risk", {
+                        pending: pressure?.pendingReviews ?? 0,
+                        highRisk: pressure?.highRiskTrips ?? 0,
+                      })}
                     </Text>
                   </View>
                   <View style={styles.rowActions}>
@@ -145,7 +168,9 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
               );
             })
           ) : (
-            <Text style={[styles.emptyText, { color: colors.muted }]}>No driver accounts have been created yet.</Text>
+            <Text style={[styles.emptyText, { color: colors.muted }]}>
+              {adminDrivers.length ? t("no_drivers_match_search") : t("no_driver_accounts")}
+            </Text>
           )}
         </View>
       </Card>
@@ -153,22 +178,22 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
       <Modal visible={Boolean(editingDriver)} animationType="fade" transparent onRequestClose={() => setEditingDriver(null)}>
         <Pressable style={styles.modalScrim} onPress={() => setEditingDriver(null)}>
           <Pressable style={[styles.modalCard, { backgroundColor: colors.panel, borderColor: colors.line }]} onPress={() => undefined}>
-            <Text style={[styles.title, { color: colors.heading }]}>Edit credentials</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("edit_credentials")}</Text>
             <Text style={[styles.modalText, { color: colors.muted }]}>
               {editingDriver?.email}
             </Text>
-            <TextField label="Email" value={email} onChangeText={setEmail} placeholder="driver@example.com" />
+            <TextField label={t("email")} value={email} onChangeText={setEmail} placeholder={t("driver_email_placeholder")} />
             <TextField
-              label="New password"
+              label={t("new_password")}
               value={password}
               onChangeText={setPassword}
-              placeholder="Leave blank to keep current password"
+              placeholder={t("leave_blank_keep_password")}
               secureTextEntry
               allowPasswordToggle
             />
             <View style={styles.modalActions}>
-              <PrimaryButton label="Cancel" onPress={() => setEditingDriver(null)} variant="secondary" />
-              <PrimaryButton label="Save" onPress={() => void handleSaveEdit()} loading={busy} />
+              <PrimaryButton label={t("cancel")} onPress={() => setEditingDriver(null)} variant="secondary" />
+              <PrimaryButton label={t("save")} onPress={() => void handleSaveEdit()} loading={busy} />
             </View>
           </Pressable>
         </Pressable>
@@ -177,13 +202,13 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
       <Modal visible={Boolean(deletingDriver)} animationType="fade" transparent onRequestClose={() => setDeletingDriver(null)}>
         <Pressable style={styles.modalScrim} onPress={() => setDeletingDriver(null)}>
           <Pressable style={[styles.modalCard, { backgroundColor: colors.panel, borderColor: colors.line }]} onPress={() => undefined}>
-            <Text style={[styles.title, { color: colors.heading }]}>Delete driver</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("delete_driver")}</Text>
             <Text style={[styles.modalText, { color: colors.muted }]}>
-              Delete {deletingDriver?.email} and all their trips? This cannot be undone.
+              {t("delete_driver_confirm", { email: deletingDriver?.email || "" })}
             </Text>
             <View style={styles.modalActions}>
-              <PrimaryButton label="Cancel" onPress={() => setDeletingDriver(null)} variant="secondary" />
-              <PrimaryButton label="Delete" onPress={() => void handleDelete()} loading={busy} variant="danger" />
+              <PrimaryButton label={t("cancel")} onPress={() => setDeletingDriver(null)} variant="secondary" />
+              <PrimaryButton label={t("delete")} onPress={() => void handleDelete()} loading={busy} variant="danger" />
             </View>
           </Pressable>
         </Pressable>
@@ -227,6 +252,15 @@ const styles = StyleSheet.create({
   },
   headerCopy: {
     gap: spacing.xs,
+    flex: 1,
+  },
+  searchWrap: {
+    width: "100%",
+    maxWidth: 320,
+  },
+  resultsMeta: {
+    fontSize: type.caption,
+    lineHeight: 18,
   },
   eyebrow: {
     fontSize: type.micro,

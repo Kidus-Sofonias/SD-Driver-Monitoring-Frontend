@@ -1,5 +1,5 @@
-import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import React, { useRef } from "react";
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text } from "react-native";
 
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -14,6 +14,8 @@ type Props = {
 
 export function PrimaryButton({ label, onPress, loading, variant = "primary", disabled }: Props) {
   const colors = useThemeColors();
+  const scale = useRef(new Animated.Value(1)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
   const variantStyle =
     variant === "primary"
       ? { backgroundColor: colors.accentDeep, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }
@@ -22,28 +24,51 @@ export function PrimaryButton({ label, onPress, loading, variant = "primary", di
         : { backgroundColor: colors.danger, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" };
   const labelStyle = variant === "secondary" ? styles.labelSecondary : styles.labelPrimary;
 
+  function animateTo(pressed: boolean) {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: pressed ? 0.975 : 1,
+        friction: 7,
+        tension: 180,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: pressed ? 1 : 0,
+        friction: 7,
+        tension: 180,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
   return (
     <Pressable
       disabled={disabled || loading}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.base,
-        variantStyle,
-        pressed && !disabled ? styles.pressed : null,
-        disabled ? styles.disabled : null
-      ]}
+      onPressIn={() => animateTo(true)}
+      onPressOut={() => animateTo(false)}
+      style={disabled ? styles.disabled : undefined}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === "secondary" ? colors.accentDeep : colors.mist} />
-      ) : (
-        <Text
-          numberOfLines={1}
-          ellipsizeMode="tail"
-          style={[styles.labelBase, labelStyle, variant === "secondary" ? { color: colors.accentDeep } : { color: colors.mist }]}
-        >
-          {label}
-        </Text>
-      )}
+      <Animated.View
+        style={[
+          styles.base,
+          variantStyle,
+          variant === "primary" ? styles.primaryGlow : null,
+          { transform: [{ scale }, { translateY }] },
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={variant === "secondary" ? colors.accentDeep : colors.mist} />
+        ) : (
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[styles.labelBase, labelStyle, variant === "secondary" ? { color: colors.accentDeep } : { color: colors.mist }]}
+          >
+            {label}
+          </Text>
+        )}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -66,9 +91,12 @@ const styles = StyleSheet.create({
   },
   labelPrimary: {},
   labelSecondary: {},
-  pressed: {
-    opacity: 0.92,
-    transform: [{ translateY: 1 }]
+  primaryGlow: {
+    shadowColor: "#081A2B",
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   disabled: {
     opacity: 0.45

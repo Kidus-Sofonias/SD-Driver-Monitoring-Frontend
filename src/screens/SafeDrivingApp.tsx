@@ -13,6 +13,7 @@ import { ReviewScreen } from "./ReviewScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { TripsScreen } from "./TripsScreen";
 import { Card } from "../components/Card";
+import { FloatingOrb, Reveal } from "../components/Motion";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useI18n } from "../i18n";
 import { displayNameFromEmail } from "../lib/format";
@@ -58,7 +59,7 @@ export function SafeDrivingApp() {
   const tabs: Array<{ key: TabKey; label: string }> = isAdmin
     ? [
         { key: "dashboard", label: t("home") },
-        { key: "drivers", label: "Drivers" },
+        { key: "drivers", label: t("drivers") },
         { key: "review", label: t("review_dashboard") },
         { key: "settings", label: t("settings") }
       ]
@@ -187,7 +188,7 @@ export function SafeDrivingApp() {
       return t("trip_details");
     }
     if (tab === "driverDetail") {
-      return "Driver record";
+      return t("driver_record");
     }
     return tabs.find((item) => item.key === tab)?.label || t("safe_driving");
   }, [tab, tabs, t]);
@@ -226,8 +227,20 @@ export function SafeDrivingApp() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.canvas }]}>
-      <View pointerEvents="none" style={[styles.backgroundOrb, styles.backgroundOrbPrimary, { backgroundColor: colors.glow }]} />
-      <View pointerEvents="none" style={[styles.backgroundOrb, styles.backgroundOrbSecondary, { backgroundColor: colors.accent }]} />
+      <FloatingOrb
+        style={[styles.backgroundOrb, styles.backgroundOrbPrimary, { backgroundColor: colors.glow }]}
+        duration={9200}
+        xRange={[-10, 12]}
+        yRange={[-14, 10]}
+        scaleRange={[0.95, 1.08]}
+      />
+      <FloatingOrb
+        style={[styles.backgroundOrb, styles.backgroundOrbSecondary, { backgroundColor: colors.accent }]}
+        duration={11000}
+        xRange={[-12, 8]}
+        yRange={[-8, 14]}
+        scaleRange={[0.94, 1.06]}
+      />
       {menuOpen ? <Pressable style={styles.drawerScrim} onPress={() => setMenuOpen(false)} /> : null}
 
       {session ? (
@@ -256,9 +269,9 @@ export function SafeDrivingApp() {
               </View>
             </View>
             <View style={[styles.brandPanel, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
-              <Text style={[styles.brandLabel, { color: colors.muted }]}>Workspace</Text>
-              <Text style={[styles.brandTitle, { color: colors.heading }]}>Driver Monitoring System</Text>
-              <Text style={[styles.brandMeta, { color: colors.muted }]}>Trip monitoring, scoring, and driver review in one place.</Text>
+              <Text style={[styles.brandLabel, { color: colors.muted }]}>{t("workspace")}</Text>
+              <Text style={[styles.brandTitle, { color: colors.heading }]}>{t("safe_driving")}</Text>
+              <Text style={[styles.brandMeta, { color: colors.muted }]}>{t("app_tagline")}</Text>
             </View>
 
             <View style={styles.navList}>
@@ -321,18 +334,20 @@ export function SafeDrivingApp() {
             <AuthScreen />
           ) : (
             <View style={styles.shell}>
-              <View style={[styles.topBar, { backgroundColor: colors.panel, borderColor: colors.line }]}>
-                <Pressable onPress={() => setMenuOpen(true)} style={[styles.burgerButton, { borderColor: colors.line, backgroundColor: colors.panelRaised }]}>
-                  <View style={[styles.burgerLine, { backgroundColor: colors.heading }]} />
-                  <View style={[styles.burgerLine, { backgroundColor: colors.heading }]} />
-                  <View style={[styles.burgerLine, { backgroundColor: colors.heading }]} />
-                </Pressable>
-                <View style={styles.topBarCopy}>
-                  <Text style={[styles.topBarEyebrow, { color: colors.muted }]}>Driver Monitoring System</Text>
-                  <Text style={[styles.topBarTitle, { color: colors.heading }]}>{pageTitle}</Text>
-                  <Text style={[styles.topBarMeta, { color: colors.muted }]}>{session.user.email}</Text>
+              <Reveal delay={40}>
+                <View style={[styles.topBar, { backgroundColor: colors.panel, borderColor: colors.line }]}>
+                  <Pressable onPress={() => setMenuOpen(true)} style={[styles.burgerButton, { borderColor: colors.line, backgroundColor: colors.panelRaised }]}>
+                    <View style={[styles.burgerLine, { backgroundColor: colors.heading }]} />
+                    <View style={[styles.burgerLine, { backgroundColor: colors.heading }]} />
+                    <View style={[styles.burgerLine, { backgroundColor: colors.heading }]} />
+                  </Pressable>
+                  <View style={styles.topBarCopy}>
+                    <Text style={[styles.topBarEyebrow, { color: colors.muted }]}>{t("safe_driving")}</Text>
+                    <Text style={[styles.topBarTitle, { color: colors.heading }]}>{pageTitle}</Text>
+                    <Text style={[styles.topBarMeta, { color: colors.muted }]}>{session.user.email}</Text>
+                  </View>
                 </View>
-              </View>
+              </Reveal>
               <View style={styles.mainContent}>{content}</View>
             </View>
           )}

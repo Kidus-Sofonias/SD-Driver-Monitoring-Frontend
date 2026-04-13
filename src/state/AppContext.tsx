@@ -89,6 +89,41 @@ function pickPendingFinalizeTrip(trips: Trip[], dismissedPendingTripIds: string[
   );
 }
 
+function pickLatestScoredTrip(trips: Trip[]) {
+  return (
+    [...trips]
+      .filter((trip) => trip.score !== null && trip.score !== undefined)
+      .sort((left, right) => {
+        const leftTime = new Date(left.processed_at || left.ended_at || left.started_at).getTime();
+        const rightTime = new Date(right.processed_at || right.ended_at || right.started_at).getTime();
+        return rightTime - leftTime;
+      })[0] ?? null
+  );
+}
+
+function mapTripDetailToFinalizeTrip(tripDetail: TripDetail): FinalizeTrip {
+  return {
+    trip_id: tripDetail.id,
+    score: tripDetail.score ?? null,
+    risk_level: tripDetail.risk_level ?? null,
+    risk_probability: tripDetail.risk_probability ?? null,
+    confidence: tripDetail.confidence ?? null,
+    confidence_band: tripDetail.confidence_band ?? null,
+    confidence_display: tripDetail.confidence_display ?? null,
+    model_version: tripDetail.model_version ?? null,
+    feature_version: tripDetail.feature_version ?? null,
+    decision_source: tripDetail.decision_source ?? null,
+    processing_timestamp: tripDetail.processed_at ?? null,
+    raw_deleted: tripDetail.raw_deleted ?? null,
+    already_processed: tripDetail.already_processed ?? null,
+    reasons: tripDetail.reasons,
+    events: tripDetail.events,
+    breakdown: tripDetail.breakdown,
+    trip_features: tripDetail.trip_features,
+    events_generated: tripDetail.events_generated ?? tripDetail.events.length,
+  };
+}
+
 function hasNotEnoughSamplesError(payload: { breakdown?: Record<string, unknown> } | null | undefined) {
   if (!payload?.breakdown || typeof payload.breakdown !== "object") {
     return false;
@@ -251,6 +286,13 @@ export function AppProvider({ children }: PropsWithChildren) {
       session.user.is_admin ? api.getReviewDashboard(apiBaseUrl, session.token.access_token) : Promise.resolve([]),
       session.user.is_admin ? api.getAdminDrivers(apiBaseUrl, session.token.access_token) : Promise.resolve([])
     ]);
+    const latestScoredTrip = session.user.is_admin ? null : pickLatestScoredTrip(trips);
+    const latestResult =
+      latestScoredTrip
+        ? mapTripDetailToFinalizeTrip(
+            await api.getTripDetail(apiBaseUrl, session.token.access_token, latestScoredTrip.id)
+          )
+        : null;
     if (activeTrip) {
       await collectorRef.current.start();
     } else {
@@ -279,6 +321,7 @@ export function AppProvider({ children }: PropsWithChildren) {
         activeTrip,
         pendingFinalizeTrip,
         trips,
+        latestResult,
         reviewItems,
         adminDrivers,
         captureMode: collectorSnapshot.mode,

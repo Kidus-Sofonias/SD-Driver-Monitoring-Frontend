@@ -4,6 +4,10 @@ export type LanguageMode = "en" | "am" | "om";
 
 type TranslationKey =
   | "home"
+  | "drivers"
+  | "driver_record"
+  | "workspace"
+  | "app_tagline"
   | "active_trip"
   | "trip_results"
   | "trip_history"
@@ -98,6 +102,51 @@ type TranslationKey =
   | "finalized_trip_review"
   | "items_need_review"
   | "review_empty"
+  | "admin_ops"
+  | "driver_safety_command"
+  | "admin_dashboard_intro"
+  | "trips_tracked"
+  | "need_review"
+  | "average_score"
+  | "average_confidence"
+  | "trips_word"
+  | "high_risk"
+  | "best_driver"
+  | "top_performer"
+  | "open_latest_trip"
+  | "top_performer_help"
+  | "drivers_to_watch"
+  | "attention_queue"
+  | "open_review"
+  | "pending_reviews_high_risk"
+  | "no_watchlist_pressure"
+  | "risk_mix"
+  | "fleet_risk_breakdown"
+  | "score_distribution"
+  | "trips_by_score_band"
+  | "recent_activity"
+  | "trips_that_just_landed"
+  | "waiting"
+  | "driver_directory"
+  | "manage_fleet_access"
+  | "driver_directory_intro"
+  | "all_drivers"
+  | "active_accounts"
+  | "search_drivers"
+  | "search_driver_placeholder"
+  | "drivers_matching"
+  | "trips_recorded"
+  | "last_trip"
+  | "no_driver_accounts"
+  | "no_drivers_match_search"
+  | "edit_credentials"
+  | "new_password"
+  | "leave_blank_keep_password"
+  | "cancel"
+  | "save"
+  | "delete"
+  | "delete_driver"
+  | "delete_driver_confirm"
   | "selected_trip"
   | "trip_review_detail"
   | "trip_id"
@@ -122,6 +171,10 @@ type TranslationKey =
 const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>> = {
   en: {
     home: "Home",
+    drivers: "Drivers",
+    driver_record: "Driver record",
+    workspace: "Workspace",
+    app_tagline: "Trip monitoring, scoring, and driver review in one place.",
     active_trip: "Active Trip",
     trip_results: "Trip Results",
     trip_history: "Trip History",
@@ -216,6 +269,51 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     finalized_trip_review: "Finalized trip review",
     items_need_review: "{count} items need review",
     review_empty: "Finalize a few trips first and they will appear here for review.",
+    admin_ops: "Admin ops",
+    driver_safety_command: "Driver safety command",
+    admin_dashboard_intro: "Review fleet risk, spot the strongest drivers, and jump straight into the trips that need human attention.",
+    trips_tracked: "Trips tracked",
+    need_review: "Need review",
+    average_score: "Average score",
+    average_confidence: "Average confidence",
+    trips_word: "trips",
+    high_risk: "high risk",
+    best_driver: "Best driver",
+    top_performer: "Top performer",
+    open_latest_trip: "Open latest trip",
+    top_performer_help: "Top performer appears after a driver has at least 5 finalized trips.",
+    drivers_to_watch: "Drivers to watch",
+    attention_queue: "Attention queue",
+    open_review: "Open review",
+    pending_reviews_high_risk: "{pending} pending reviews, {highRisk} high-risk trips",
+    no_watchlist_pressure: "No watchlist pressure yet.",
+    risk_mix: "Risk mix",
+    fleet_risk_breakdown: "Fleet risk breakdown",
+    score_distribution: "Score distribution",
+    trips_by_score_band: "Trips by score band",
+    recent_activity: "Recent activity",
+    trips_that_just_landed: "Trips that just landed",
+    waiting: "{count} waiting",
+    driver_directory: "Driver directory",
+    manage_fleet_access: "Manage fleet access",
+    driver_directory_intro: "Open any driver record to inspect their trips, rotate credentials, or remove access.",
+    all_drivers: "All drivers",
+    active_accounts: "{count} active accounts",
+    search_drivers: "Search drivers",
+    search_driver_placeholder: "Search by email",
+    drivers_matching: "{count} drivers matching",
+    trips_recorded: "{count} trips recorded",
+    last_trip: "Last trip: {time}",
+    no_driver_accounts: "No driver accounts have been created yet.",
+    no_drivers_match_search: "No drivers match your search.",
+    edit_credentials: "Edit credentials",
+    new_password: "New password",
+    leave_blank_keep_password: "Leave blank to keep current password",
+    cancel: "Cancel",
+    save: "Save",
+    delete: "Delete",
+    delete_driver: "Delete driver",
+    delete_driver_confirm: "Delete {email} and all their trips? This cannot be undone.",
     selected_trip: "Selected trip",
     trip_review_detail: "Trip review detail",
     trip_id: "Trip ID",
@@ -356,6 +454,10 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
   },
   om: {
     home: "Mana",
+    drivers: "Ooftota",
+    driver_record: "Galmee Ooftotaa",
+    workspace: "Bakka hojii",
+    app_tagline: "To'annoo imalaa, qabxii, fi gamaaggama oftootaa bakka tokko keessatti.",
     active_trip: "Imala Itti Jiru",
     trip_results: "Bu'aa Imalaa",
     trip_history: "Seenaa Imalaa",
@@ -392,6 +494,51 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     refresh_data: "Deetaa haaromsi",
     session_theme: "Kutaa fi bifa",
     session_theme_help: "Fuula kana irraa bifa jijjiiruu fi herrega keessaa bahuu dandeessa.",
+    admin_ops: "Hojii adminii",
+    driver_safety_command: "Bulchiinsa nageenya oftootaa",
+    admin_dashboard_intro: "Balaa fleet ilaali, oftoota cimaa adda baasi, imaloota ilaalcha nama barbaadan saffisaan banuu dandeessi.",
+    trips_tracked: "Imaloota hordofaman",
+    need_review: "Gamaaggama barbaada",
+    average_score: "Qabxii giddugaleessaa",
+    average_confidence: "Amanamummaa giddugaleessaa",
+    trips_word: "imaloota",
+    high_risk: "balaa olaanaa",
+    best_driver: "Ooftuu keessaa caalu",
+    top_performer: "Kan hojii olaanaa agarsiise",
+    open_latest_trip: "Imala isa dhumaa bani",
+    top_performer_help: "Kan hojii olaanaa agarsiise kan mul'atu erga oftuun imala xumurame 5 qabaatee booda.",
+    drivers_to_watch: "Ooftota hordofamuu qaban",
+    attention_queue: "Tarree xiyyeeffannoo",
+    open_review: "Gamaaggama bani",
+    pending_reviews_high_risk: "Gamaaggamni {pending} eegaa jira, imaloonni balaa olaanaa {highRisk}",
+    no_watchlist_pressure: "Ammaaf dhiibbaa tarree hordoffii hin jiru.",
+    risk_mix: "Walmakaa balaa",
+    fleet_risk_breakdown: "Caccabsa balaa fleet",
+    score_distribution: "Raabsa qabxii",
+    trips_by_score_band: "Imaloota kutaa qabxii irratti",
+    recent_activity: "Sochii dhiyoo",
+    trips_that_just_landed: "Imaloota amma dhufan",
+    waiting: "{count} eegaa jira",
+    driver_directory: "Galmee oftootaa",
+    manage_fleet_access: "Seensa fleet to'adhu",
+    driver_directory_intro: "Galmee oftuu kamiyyuu bani, imaloota isaa ilaali, seensawwan jijjiiri, yookaan hayyama haqii.",
+    all_drivers: "Ooftota hunda",
+    active_accounts: "Herregawwan hojii irra jiran {count}",
+    search_drivers: "Ooftota barbaadi",
+    search_driver_placeholder: "Imeeliidhaan barbaadi",
+    drivers_matching: "Ooftota walsiman {count}",
+    trips_recorded: "Imaloonni galmaa'an {count}",
+    last_trip: "Imala dhumaa: {time}",
+    no_driver_accounts: "Herregni oftootaa hanga ammaatti hin uumamne.",
+    no_drivers_match_search: "Barbaacha kee waliin oftuun wal simatu hin jiru.",
+    edit_credentials: "Ragaa seensaa gulaali",
+    new_password: "Jecha icciitii haaraa",
+    leave_blank_keep_password: "Kan amma jiru eeguuf duwwaa dhiisi",
+    cancel: "Dhiisi",
+    save: "Kuusi",
+    delete: "Haqi",
+    delete_driver: "Ooftuu haqii",
+    delete_driver_confirm: "{email} fi imaloota isaa hunda haqxaa? Kun deebi'ee hin jijjiiramu.",
   },
 };
 

@@ -4,6 +4,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Card } from "../components/Card";
 import { AnimatedScoreRing } from "../components/AnimatedScoreRing";
 import { MetricTile } from "../components/MetricTile";
+import { Reveal } from "../components/Motion";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
 import { formatConfidence, formatDateTime, formatPercent, titleCase } from "../lib/format";
@@ -23,11 +24,15 @@ export function ResultsScreen() {
 
   return (
     <View style={styles.root}>
-      <Card>
-        <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("trip_result")}</Text>
+      <Card delay={100}>
+        <Reveal delay={20}>
+          <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("trip_result")}</Text>
+        </Reveal>
         <View style={[styles.summaryRow, isWide ? styles.summaryRowWide : null]}>
-          <AnimatedScoreRing score={latestResult?.score ?? reviewFallback?.score ?? null} size={168} />
-          <View style={styles.summaryBody}>
+          <Reveal delay={90}>
+            <AnimatedScoreRing score={latestResult?.score ?? reviewFallback?.score ?? null} size={168} />
+          </Reveal>
+          <Reveal delay={150} style={styles.summaryBody}>
             <Text style={[styles.heading, { color: colors.heading }]}>{latestResult || reviewFallback ? t("latest_trip_result") : t("awaiting_finalized_trip")}</Text>
             <View style={styles.badgeRow}>
               <StatusPill
@@ -49,7 +54,7 @@ export function ResultsScreen() {
                   ? t("results_page_fallback")
                   : t("results_page_empty")}
             </Text>
-          </View>
+          </Reveal>
         </View>
 
         <View style={[styles.metricsRow, !isWide ? styles.metricsStack : null]}>
@@ -59,7 +64,7 @@ export function ResultsScreen() {
         </View>
       </Card>
 
-      <Card>
+      <Card delay={180}>
         <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("top_reasons")}</Text>
         {reasons.map((reason) => (
           <View key={reason} style={[styles.reasonRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
@@ -69,7 +74,7 @@ export function ResultsScreen() {
         {!reasons.length ? <Text style={[styles.copy, { color: colors.muted }]}>{t("no_reasons_yet")}</Text> : null}
       </Card>
 
-      <Card>
+      <Card delay={260}>
         <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
         {events.length ? (
           events.slice(0, 5).map((event) => (
