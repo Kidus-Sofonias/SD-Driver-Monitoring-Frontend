@@ -1,29 +1,37 @@
 {
   "expo": {
-    "name": "Driver Monitoring System",
+    "name": "DriverPulse",
     "slug": "safe-driving-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "scheme": "safedrivingmobile",
+    "icon": "./assets/icon.png",
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Driver Monitoring System to collect trip location while you are driving.",
+          "locationWhenInUsePermission": "Allow DriverPulse to collect trip location while you are driving.",
           "isAndroidBackgroundLocationEnabled": false
         }
       ]
     ],
     "android": {
       "package": "com.safe.driving.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#04101B"
+      },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.safe.driving.mobile"
+      "bundleIdentifier": "com.safe.driving.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "extra": {
       "eas": {
