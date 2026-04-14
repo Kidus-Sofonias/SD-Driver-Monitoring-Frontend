@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 
-import type { TripRoutePoint } from "../types/api";
+import type { DrivingEvent, TripRoutePoint } from "../types/api";
 import { radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
 
@@ -16,11 +16,17 @@ type LeafletBundle = {
 
 type Props = {
   points: TripRoutePoint[];
+  events?: DrivingEvent[];
   height?: number;
   showLegend?: boolean;
 };
 
-export function RoutePreview({ points, height = 220, showLegend = true }: Props) {
+type EventMarker = {
+  event: DrivingEvent;
+  point: TripRoutePoint;
+};
+
+export function RoutePreview({ points, events = [], height = 220, showLegend = true }: Props) {
   const colors = useThemeColors();
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [leafletBundle, setLeafletBundle] = useState<LeafletBundle | null>(null);
@@ -28,10 +34,9 @@ export function RoutePreview({ points, height = 220, showLegend = true }: Props)
   const canvasHeight = height;
   const padding = 18;
   const projected = useMemo(() => projectRoute(points, canvasWidth, canvasHeight, padding), [canvasHeight, canvasWidth, padding, points]);
-  const routeCoordinates = useMemo(
-    () => points.map((point) => [point.lat, point.lon] as [number, number]),
-    [points]
-  );
+  const routeCoordinates = useMemo(() => points.map((point) => [point.lat, point.lon] as [number, number]), [points]);
+  const eventMarkers = useMemo(() => mapEventsToRoutePoints(points, events), [events, points]);
+  const projectedEvents = useMemo(() => projectEventMarkers(eventMarkers, points, projected.points), [eventMarkers, points, projected.points]);
 
   useEffect(() => {
     let active = true;
@@ -52,7 +57,7 @@ export function RoutePreview({ points, height = 220, showLegend = true }: Props)
           Polyline: reactLeafletModule.Polyline,
           TileLayer: reactLeafletModule.TileLayer,
           Tooltip: reactLeafletModule.Tooltip,
-          L
+          L,
         });
         setLeafletError(null);
       } catch (error) {
@@ -79,7 +84,16 @@ export function RoutePreview({ points, height = 220, showLegend = true }: Props)
   }
 
   if (leafletBundle) {
-    return <LeafletRouteMap bundle={leafletBundle} points={points} routeCoordinates={routeCoordinates} height={height} showLegend={showLegend} />;
+    return (
+      <LeafletRouteMap
+        bundle={leafletBundle}
+        points={points}
+        routeCoordinates={routeCoordinates}
+        eventMarkers={eventMarkers}
+        height={height}
+        showLegend={showLegend}
+      />
+    );
   }
 
   return (
@@ -105,8 +119,8 @@ export function RoutePreview({ points, height = 220, showLegend = true }: Props)
                 top: segment.top,
                 width: segment.length,
                 backgroundColor: colors.accentStrong,
-                transform: [{ rotate: `${segment.angle}deg` }]
-              }
+                transform: [{ rotate: `${segment.angle}deg` }],
+              },
             ]}
           />
         ))}
@@ -120,8 +134,22 @@ export function RoutePreview({ points, height = 220, showLegend = true }: Props)
                 top: point.y - 4,
                 backgroundColor:
                   index === 0 ? "#2E9E5B" : index === projected.points.length - 1 ? "#D3505D" : colors.accent,
-                borderColor: colors.panel
-              }
+                borderColor: colors.panel,
+              },
+            ]}
+          />
+        ))}
+        {projectedEvents.map((marker) => (
+          <View
+            key={`event-${marker.event.id}`}
+            style={[
+              styles.eventBadge,
+              {
+                left: marker.x - 8,
+                top: marker.y - 8,
+                backgroundColor: eventToneColor(marker.event.event_type),
+                borderColor: colors.panel,
+              },
             ]}
           />
         ))}
@@ -131,6 +159,7 @@ export function RoutePreview({ points, height = 220, showLegend = true }: Props)
           <Text style={[styles.routeLegendText, { color: colors.text }]}>Fallback route preview is active until the free map loads.</Text>
           <Text style={[styles.routeLegendText, { color: colors.text }]}>Green = start</Text>
           <Text style={[styles.routeLegendText, { color: colors.text }]}>Red = finish</Text>
+          {eventMarkers.length ? <Text style={[styles.routeLegendText, { color: colors.text }]}>Amber = event marker</Text> : null}
         </View>
       ) : null}
     </View>
@@ -141,12 +170,14 @@ function LeafletRouteMap({
   bundle,
   points,
   routeCoordinates,
+  eventMarkers,
   height,
   showLegend,
 }: {
   bundle: LeafletBundle;
   points: TripRoutePoint[];
   routeCoordinates: [number, number][];
+  eventMarkers: EventMarker[];
   height: number;
   showLegend: boolean;
 }) {
@@ -178,14 +209,29 @@ function LeafletRouteMap({
           <bundle.Polyline positions={routeCoordinates} pathOptions={{ color: "#1677FF", weight: 4 }} />
           {startPoint ? (
             <bundle.Marker position={[startPoint.lat, startPoint.lon]} icon={startIcon}>
-              <bundle.Tooltip direction="top" offset={[0, -12]} permanent={false}>Trip start</bundle.Tooltip>
+              <bundle.Tooltip direction="top" offset={[0, -12]} permanent={false}>
+                Trip start
+              </bundle.Tooltip>
             </bundle.Marker>
           ) : null}
           {endPoint && (endPoint.lat !== startPoint?.lat || endPoint.lon !== startPoint?.lon) ? (
             <bundle.Marker position={[endPoint.lat, endPoint.lon]} icon={endIcon}>
-              <bundle.Tooltip direction="top" offset={[0, -12]} permanent={false}>Trip end</bundle.Tooltip>
+              <bundle.Tooltip direction="top" offset={[0, -12]} permanent={false}>
+                Trip end
+              </bundle.Tooltip>
             </bundle.Marker>
           ) : null}
+          {eventMarkers.map(({ event, point }) => (
+            <bundle.Marker
+              key={`event-${event.id}`}
+              position={[point.lat, point.lon]}
+              icon={createEventIcon(bundle.L, eventToneColor(event.event_type), eventShortLabel(event.event_type))}
+            >
+              <bundle.Tooltip direction="top" offset={[0, -12]} permanent={false}>
+                {eventTooltip(event)}
+              </bundle.Tooltip>
+            </bundle.Marker>
+          ))}
         </bundle.MapContainer>
       </View>
       {showLegend ? (
@@ -193,6 +239,7 @@ function LeafletRouteMap({
           <Text style={[styles.routeLegendText, { color: colors.text }]}>Blue line = route</Text>
           <Text style={[styles.routeLegendText, { color: colors.text }]}>Green = start</Text>
           <Text style={[styles.routeLegendText, { color: colors.text }]}>Red = finish</Text>
+          {eventMarkers.length ? <Text style={[styles.routeLegendText, { color: colors.text }]}>Amber = detected event</Text> : null}
         </View>
       ) : null}
     </View>
@@ -219,13 +266,45 @@ function createDivIcon(L: any, color: string, label: string) {
     className: "safe-driving-route-marker",
     html: `<div style="width:24px;height:24px;border-radius:999px;background:${color};border:3px solid white;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">${label}</div>`,
     iconSize: [24, 24],
-    iconAnchor: [12, 12]
+    iconAnchor: [12, 12],
   });
+}
+
+function createEventIcon(L: any, color: string, label: string) {
+  return L.divIcon({
+    className: "safe-driving-route-event-marker",
+    html: `<div style="width:18px;height:18px;border-radius:999px;background:${color};border:2px solid white;display:flex;align-items:center;justify-content:center;color:#08111C;font-weight:800;font-size:9px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">${label}</div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+
+function mapEventsToRoutePoints(points: TripRoutePoint[], events: DrivingEvent[]): EventMarker[] {
+  if (!points.length || !events.length) {
+    return [];
+  }
+
+  return events.map((event) => ({
+    event,
+    point: findClosestPointByTimestamp(points, event.created_at),
+  }));
+}
+
+function findClosestPointByTimestamp(points: TripRoutePoint[], timestamp: string) {
+  const targetTime = new Date(timestamp).getTime();
+  return points.reduce((closest, current) => {
+    const currentDelta = Math.abs(new Date(current.ts).getTime() - targetTime);
+    const closestDelta = Math.abs(new Date(closest.ts).getTime() - targetTime);
+    return currentDelta < closestDelta ? current : closest;
+  }, points[0]);
 }
 
 function projectRoute(points: TripRoutePoint[], width: number, height: number, padding: number) {
   if (!points.length || width <= 0) {
-    return { points: [], segments: [] as Array<{ key: string; left: number; top: number; length: number; angle: number }> };
+    return {
+      points: [],
+      segments: [] as Array<{ key: string; left: number; top: number; length: number; angle: number }>,
+    };
   }
 
   const lats = points.map((point) => point.lat);
@@ -241,7 +320,7 @@ function projectRoute(points: TripRoutePoint[], width: number, height: number, p
 
   const mappedPoints = points.map((point) => ({
     x: padding + ((point.lon - minLon) / lonSpan) * usableWidth,
-    y: padding + (1 - (point.lat - minLat) / latSpan) * usableHeight
+    y: padding + (1 - (point.lat - minLat) / latSpan) * usableHeight,
   }));
 
   const segments = mappedPoints.slice(1).map((point, index) => {
@@ -254,11 +333,50 @@ function projectRoute(points: TripRoutePoint[], width: number, height: number, p
       left: previous.x + dx / 2 - length / 2,
       top: previous.y + dy / 2 - 1.5,
       length,
-      angle: (Math.atan2(dy, dx) * 180) / Math.PI
+      angle: (Math.atan2(dy, dx) * 180) / Math.PI,
     };
   });
 
   return { points: mappedPoints, segments };
+}
+
+function projectEventMarkers(eventMarkers: EventMarker[], points: TripRoutePoint[], mappedPoints: Array<{ x: number; y: number }>) {
+  return eventMarkers.map(({ event, point }) => {
+    const index = points.findIndex(
+      (candidate) => candidate.ts === point.ts && candidate.lat === point.lat && candidate.lon === point.lon
+    );
+    const mappedPoint = mappedPoints[Math.max(index, 0)] ?? mappedPoints[0] ?? { x: 0, y: 0 };
+    return { event, ...mappedPoint };
+  });
+}
+
+function humanizeEventType(eventType: string) {
+  return eventType
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function eventShortLabel(eventType: string) {
+  return humanizeEventType(eventType).slice(0, 1).toUpperCase();
+}
+
+function eventTooltip(event: DrivingEvent) {
+  return `${humanizeEventType(event.event_type)} • value ${Math.round(event.value)}`;
+}
+
+function eventToneColor(eventType: string) {
+  const normalized = eventType.toLowerCase();
+  if (normalized.includes("brak")) {
+    return "#FF9B7A";
+  }
+  if (normalized.includes("turn")) {
+    return "#7DD3FC";
+  }
+  if (normalized.includes("unstable")) {
+    return "#C7F36B";
+  }
+  return "#F7C873";
 }
 
 const styles = StyleSheet.create({
@@ -289,12 +407,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: "rgba(26, 62, 103, 0.08)",
   },
-  staticMap: {
-    width: "100%",
-    height: 280,
-    borderRadius: radius.sm,
-    backgroundColor: "rgba(26, 62, 103, 0.08)",
-  },
   routeSegment: {
     position: "absolute",
     height: 3,
@@ -304,6 +416,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 8,
     height: 8,
+    borderRadius: 999,
+    borderWidth: 2,
+  },
+  eventBadge: {
+    position: "absolute",
+    width: 16,
+    height: 16,
     borderRadius: 999,
     borderWidth: 2,
   },

@@ -12,6 +12,8 @@ export function AnimatedScoreRing({ score, size = 160 }: Props) {
   const colors = useThemeColors();
   const animatedValue = useRef(new Animated.Value(0)).current;
   const resolvedScore = typeof score === "number" ? Math.max(0, Math.min(100, score)) : null;
+  const ringColor =
+    resolvedScore === null ? colors.accentStrong : resolvedScore >= 80 ? colors.lime : resolvedScore >= 55 ? colors.peach : colors.danger;
   const fillHeight = useMemo(
     () =>
       animatedValue.interpolate({
@@ -38,8 +40,8 @@ export function AnimatedScoreRing({ score, size = 160 }: Props) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderColor: colors.accentStrong,
-          backgroundColor: colors.glow,
+          borderColor: ringColor,
+          backgroundColor: colors.panelRaised,
         },
       ]}
     >
@@ -48,8 +50,8 @@ export function AnimatedScoreRing({ score, size = 160 }: Props) {
           style={[
             styles.fill,
             {
-              backgroundColor: colors.accentStrong,
-              opacity: colors.canvas === "#08111C" ? 0.42 : 0.18,
+              backgroundColor: ringColor,
+              opacity: colors.canvas === "#04101B" ? 0.32 : 0.16,
               height: fillHeight,
             },
           ]}

@@ -112,7 +112,7 @@ export function TripDetailScreen({ onBack }: Props) {
         <Card>
           <Text style={[styles.eyebrow, { color: colors.muted }]}>Historical route</Text>
           <View style={styles.routeSection}>
-            <RoutePreview points={selectedTripRoute.points} />
+            <RoutePreview points={selectedTripRoute.points} events={detail.events} />
             <View style={[styles.routeActions, !isWide ? styles.routeActionsStack : null]}>
               <View style={styles.routeActionButton}>
                 <PrimaryButton label="Open full screen map" onPress={() => setMapOpen(true)} />
@@ -159,7 +159,7 @@ export function TripDetailScreen({ onBack }: Props) {
           </View>
           {selectedTripRoute?.points.length ? (
             <View style={styles.fullscreenMapCard}>
-              <RoutePreview points={selectedTripRoute.points} height={Math.max(420, width * 1.2)} showLegend={false} />
+              <RoutePreview points={selectedTripRoute.points} events={detail.events} height={Math.max(420, width * 1.2)} showLegend={false} />
             </View>
           ) : null}
         </View>

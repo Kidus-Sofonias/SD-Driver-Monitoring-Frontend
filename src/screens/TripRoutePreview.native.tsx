@@ -2,21 +2,23 @@ import React, { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 
-import type { TripRoutePoint } from "../types/api";
+import type { DrivingEvent, TripRoutePoint } from "../types/api";
 import { radius, spacing, type } from "../theme/tokens";
 
 type Props = {
   points: TripRoutePoint[];
+  events?: DrivingEvent[];
   height?: number;
   showLegend?: boolean;
 };
 
-export function RoutePreview({ points, height = 280, showLegend = true }: Props) {
+export function RoutePreview({ points, events = [], height = 280, showLegend = true }: Props) {
   const mapRef = useRef<MapView | null>(null);
   const routeCoordinates = useMemo(
     () => points.map((point) => ({ latitude: point.lat, longitude: point.lon })),
     [points]
   );
+  const eventMarkers = useMemo(() => mapEventsToRoutePoints(points, events), [events, points]);
 
   useEffect(() => {
     if (!mapRef.current || routeCoordinates.length < 2) {
@@ -65,16 +67,67 @@ export function RoutePreview({ points, height = 280, showLegend = true }: Props)
         {endPoint && (endPoint.latitude !== startPoint?.latitude || endPoint.longitude !== startPoint?.longitude) ? (
           <Marker coordinate={endPoint} title="Trip end" pinColor="#D3505D" />
         ) : null}
+        {eventMarkers.map(({ event, point }) => (
+          <Marker
+            key={`event-${event.id}`}
+            coordinate={{ latitude: point.lat, longitude: point.lon }}
+            title={humanizeEventType(event.event_type)}
+            description={`Value ${Math.round(event.value)} at ${new Date(event.created_at).toLocaleString()}`}
+            pinColor={eventToneColor(event.event_type)}
+          />
+        ))}
       </MapView>
       {showLegend ? (
         <View style={styles.routeLegend}>
           <Text style={styles.routeLegendText}>Blue line = route</Text>
           <Text style={styles.routeLegendText}>Green = start</Text>
           <Text style={styles.routeLegendText}>Red = finish</Text>
+          {eventMarkers.length ? <Text style={styles.routeLegendText}>Amber = detected event</Text> : null}
         </View>
       ) : null}
     </View>
   );
+}
+
+function mapEventsToRoutePoints(points: TripRoutePoint[], events: DrivingEvent[]) {
+  if (!points.length || !events.length) {
+    return [];
+  }
+
+  return events.map((event) => ({
+    event,
+    point: findClosestPointByTimestamp(points, event.created_at),
+  }));
+}
+
+function findClosestPointByTimestamp(points: TripRoutePoint[], timestamp: string) {
+  const targetTime = new Date(timestamp).getTime();
+  return points.reduce((closest, current) => {
+    const currentDelta = Math.abs(new Date(current.ts).getTime() - targetTime);
+    const closestDelta = Math.abs(new Date(closest.ts).getTime() - targetTime);
+    return currentDelta < closestDelta ? current : closest;
+  }, points[0]);
+}
+
+function humanizeEventType(eventType: string) {
+  return eventType
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function eventToneColor(eventType: string) {
+  const normalized = eventType.toLowerCase();
+  if (normalized.includes("brak")) {
+    return "#FF9B7A";
+  }
+  if (normalized.includes("turn")) {
+    return "#7DD3FC";
+  }
+  if (normalized.includes("unstable")) {
+    return "#C7F36B";
+  }
+  return "#F7C873";
 }
 
 function buildRouteRegion(points: TripRoutePoint[]) {

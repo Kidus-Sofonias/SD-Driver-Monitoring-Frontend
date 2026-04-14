@@ -18,24 +18,29 @@ export function PrimaryButton({ label, onPress, loading, variant = "primary", di
   const translateY = useRef(new Animated.Value(0)).current;
   const variantStyle =
     variant === "primary"
-      ? { backgroundColor: colors.accentDeep, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }
+      ? { backgroundColor: colors.lime, borderWidth: 1, borderColor: "rgba(199,243,107,0.36)" }
       : variant === "secondary"
-        ? { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line }
-        : { backgroundColor: colors.danger, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" };
-  const labelStyle = variant === "secondary" ? styles.labelSecondary : styles.labelPrimary;
+        ? { backgroundColor: colors.panelRaised, borderWidth: 1, borderColor: colors.line }
+        : { backgroundColor: "rgba(255,154,146,0.16)", borderWidth: 1, borderColor: "rgba(255,154,146,0.26)" };
+  const labelColor =
+    variant === "primary"
+      ? colors.ink
+      : variant === "secondary"
+        ? colors.heading
+        : colors.danger;
 
   function animateTo(pressed: boolean) {
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: pressed ? 0.975 : 1,
-        friction: 7,
-        tension: 180,
+        toValue: pressed ? 0.97 : 1,
+        friction: 8,
+        tension: 190,
         useNativeDriver: true,
       }),
       Animated.spring(translateY, {
-        toValue: pressed ? 1 : 0,
-        friction: 7,
-        tension: 180,
+        toValue: pressed ? 1.5 : 0,
+        friction: 8,
+        tension: 190,
         useNativeDriver: true,
       }),
     ]).start();
@@ -53,17 +58,17 @@ export function PrimaryButton({ label, onPress, loading, variant = "primary", di
         style={[
           styles.base,
           variantStyle,
-          variant === "primary" ? styles.primaryGlow : null,
+          variant === "primary" ? dynamicStyles(colors).primaryGlow : dynamicStyles(colors).secondaryGlow,
           { transform: [{ scale }, { translateY }] },
         ]}
       >
         {loading ? (
-          <ActivityIndicator color={variant === "secondary" ? colors.accentDeep : colors.mist} />
+          <ActivityIndicator color={variant === "primary" ? colors.ink : labelColor} />
         ) : (
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            style={[styles.labelBase, labelStyle, variant === "secondary" ? { color: colors.accentDeep } : { color: colors.mist }]}
+            style={[styles.labelBase, { color: labelColor }]}
           >
             {label}
           </Text>
@@ -75,11 +80,11 @@ export function PrimaryButton({ label, onPress, loading, variant = "primary", di
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 50,
+    minHeight: 52,
     borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: spacing.md
+    paddingHorizontal: spacing.lg
   },
   labelBase: {
     fontSize: type.body,
@@ -89,16 +94,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flexShrink: 1
   },
-  labelPrimary: {},
-  labelSecondary: {},
-  primaryGlow: {
-    shadowColor: "#081A2B",
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
-  },
   disabled: {
     opacity: 0.45
   }
 });
+
+function dynamicStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    primaryGlow: {
+      shadowColor: colors.lime,
+      shadowOpacity: 0.24,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 5,
+    },
+    secondaryGlow: {
+      shadowColor: colors.canvas === "#04101B" ? "#000000" : colors.accentStrong,
+      shadowOpacity: colors.canvas === "#04101B" ? 0.16 : 0.1,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 3,
+    },
+  });
+}

@@ -228,14 +228,14 @@ export function SafeDrivingApp() {
   return (
     <View style={[styles.root, { backgroundColor: colors.canvas }]}>
       <FloatingOrb
-        style={[styles.backgroundOrb, styles.backgroundOrbPrimary, { backgroundColor: colors.glow }]}
+        style={[styles.backgroundOrb, styles.backgroundOrbPrimary, { backgroundColor: colors.sky }]}
         duration={9200}
         xRange={[-10, 12]}
         yRange={[-14, 10]}
         scaleRange={[0.95, 1.08]}
       />
       <FloatingOrb
-        style={[styles.backgroundOrb, styles.backgroundOrbSecondary, { backgroundColor: colors.accent }]}
+        style={[styles.backgroundOrb, styles.backgroundOrbSecondary, { backgroundColor: colors.aqua }]}
         duration={11000}
         xRange={[-12, 8]}
         yRange={[-8, 14]}

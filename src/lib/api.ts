@@ -23,7 +23,7 @@ type RequestOptions = {
   baseUrl?: string;
 };
 
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 30000;
 const LOCALHOST_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 function normalizeBaseUrl(url: string) {

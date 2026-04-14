@@ -147,6 +147,33 @@ function getErrorMessage(error: unknown) {
   return message.includes("not_enough_samples") ? EMPTY_TRIP_FINALIZE_MESSAGE : message;
 }
 
+function isLocalApiUrl(url: string | null | undefined) {
+  if (!url) {
+    return false;
+  }
+
+  return /^https?:\/\/(127\.0\.0\.1|localhost|10\.0\.2\.2)(:\d+)?(\/|$)/i.test(url.trim());
+}
+
+function resolveBootstrapApiBaseUrl(storedApiBaseUrl: string | null, defaultApiBaseUrl: string) {
+  const normalizedDefault = normalizeApiBaseUrl(defaultApiBaseUrl);
+  const normalizedStored = storedApiBaseUrl ? normalizeApiBaseUrl(storedApiBaseUrl) : "";
+
+  if (!normalizedStored) {
+    return normalizedDefault;
+  }
+
+  if (!__DEV__ && !isLocalApiUrl(normalizedDefault)) {
+    return normalizedDefault;
+  }
+
+  if (isLocalApiUrl(normalizedStored) && !isLocalApiUrl(normalizedDefault)) {
+    return normalizedDefault;
+  }
+
+  return normalizedStored;
+}
+
 export function AppProvider({ children }: PropsWithChildren) {
   const collectorRef = useRef(createPhoneSensorCollector());
   const [state, setState] = useState<AppState>({
@@ -172,7 +199,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     uploadedBurstCount: 0,
     lastUploadAt: null,
     dismissedPendingTripIds: [],
-    themeMode: "light",
+    themeMode: "dark",
     languageMode: "en"
   });
 
@@ -206,8 +233,12 @@ export function AppProvider({ children }: PropsWithChildren) {
     try {
       const health = await api.getHealth(apiBaseUrl);
       nextHealthLabel = `${health.data.service} ${health.data.version}`;
-    } catch {
-      nextHealthLabel = "Backend unavailable";
+    } catch (error) {
+      const message = getErrorMessage(error).toLowerCase();
+      nextHealthLabel =
+        message.includes("timed out") || message.includes("could not reach backend")
+          ? "Waking backend..."
+          : "Backend unavailable";
     }
 
     if (nextSession) {
@@ -251,10 +282,14 @@ export function AppProvider({ children }: PropsWithChildren) {
         loadLanguageMode(),
         loadDismissedPendingTripIds()
       ]);
-      const apiBaseUrl = normalizeApiBaseUrl(storedApiBaseUrl || DEFAULT_API_BASE_URL);
-      const themeMode = storedThemeMode || "light";
+      const apiBaseUrl = resolveBootstrapApiBaseUrl(storedApiBaseUrl, DEFAULT_API_BASE_URL);
+      const themeMode = storedThemeMode || "dark";
       const languageMode = storedLanguageMode || "en";
       const session = rawStoredSession;
+
+      if (apiBaseUrl !== normalizeApiBaseUrl(storedApiBaseUrl || "")) {
+        await saveApiBaseUrl(apiBaseUrl);
+      }
 
       setState((current) => ({
         ...current,

@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   heroEyebrow: {
-    color: "#9CC5F8",
+    color: "#7DD3FC",
     fontSize: type.micro,
     fontWeight: "700",
     letterSpacing: 1,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   heroText: {
-    color: "#D4E1EF",
+    color: "#D7E7F6",
     fontSize: type.body,
     lineHeight: 24,
     maxWidth: 620,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   heroStat: {
     minWidth: 150,
     flexGrow: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     borderRadius: radius.md,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   heroStatLabel: {
-    color: "#C1D6EE",
+    color: "#A7BED6",
     fontSize: type.micro,
     textTransform: "uppercase",
     letterSpacing: 0.8,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     top: -64,
     right: -36,
-    backgroundColor: "rgba(88, 180, 214, 0.16)",
+    backgroundColor: "rgba(125, 211, 252, 0.16)",
   },
   heroOrbSecondary: {
     position: "absolute",
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     left: -20,
     bottom: -28,
-    backgroundColor: "rgba(255,255,255,0.09)",
+    backgroundColor: "rgba(199,243,107,0.08)",
   },
   grid: {
     gap: spacing.lg,

@@ -35,14 +35,14 @@ export function AuthScreen() {
         <FloatingOrb style={styles.heroOrbSecondary} duration={9800} xRange={[-10, 8]} yRange={[-6, 12]} />
         <Reveal delay={30}>
           <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.12)" }]}>
-            <Text style={styles.eyebrow}>Driver Monitoring System</Text>
+            <Text style={styles.eyebrow}>{t("safe_driving")}</Text>
           </View>
         </Reveal>
         <Reveal delay={90}>
           <Text style={[styles.title, { color: colors.mist }]}>{t("sign_in_start")}</Text>
         </Reveal>
         <Reveal delay={150}>
-          <Text style={[styles.subtitle, { color: "#D3E2F3" }]}>{t("auth_intro")}</Text>
+          <Text style={[styles.subtitle, { color: "#D7E7F6" }]}>{t("auth_intro")}</Text>
         </Reveal>
         <View style={styles.heroStats}>
           <Reveal delay={210} style={styles.heroStat}>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs
   },
   eyebrow: {
-    color: "#9CC5F8",
+    color: "#7DD3FC",
     textTransform: "uppercase",
     letterSpacing: 1.4,
     fontFamily: fontFamily.heading,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     right: -36,
     top: -30,
-    backgroundColor: "rgba(108, 188, 221, 0.18)",
+    backgroundColor: "rgba(125, 211, 252, 0.16)",
   },
   heroOrbSecondary: {
     position: "absolute",
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     left: -26,
     bottom: -24,
-    backgroundColor: "rgba(255, 255, 255, 0.10)",
+    backgroundColor: "rgba(199, 243, 107, 0.10)",
   },
   formColumn: {
     flex: 1,

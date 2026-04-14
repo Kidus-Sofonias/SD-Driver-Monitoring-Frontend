@@ -61,14 +61,15 @@ function dynamicStyles(colors: ReturnType<typeof useThemeColors>) {
       backgroundColor: colors.panel,
       borderColor: colors.line,
       borderWidth: 1,
+      overflow: "hidden",
       ...(Platform.OS === "web"
-        ? { boxShadow: colors.canvas === "#08111C" ? "0px 24px 48px rgba(0, 0, 0, 0.30)" : "0px 18px 40px rgba(16, 34, 54, 0.08)" }
+        ? { boxShadow: colors.canvas === "#04101B" ? "0px 26px 64px rgba(0, 0, 0, 0.42)" : "0px 18px 44px rgba(8, 26, 43, 0.12)" }
         : {
-            shadowColor: colors.canvas === "#08111C" ? "#000000" : "#102236",
-            shadowOpacity: colors.canvas === "#08111C" ? 0.24 : 0.09,
-            shadowRadius: 22,
-            shadowOffset: { width: 0, height: 12 },
-            elevation: 4,
+            shadowColor: colors.canvas === "#04101B" ? "#000000" : "#102236",
+            shadowOpacity: colors.canvas === "#04101B" ? 0.34 : 0.12,
+            shadowRadius: 26,
+            shadowOffset: { width: 0, height: 14 },
+            elevation: 6,
           }),
     },
   });

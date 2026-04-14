@@ -26,7 +26,7 @@ export function Reveal({
 }: RevealProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(distance)).current;
-  const scale = useRef(new Animated.Value(0.96)).current;
+  const scale = useRef(new Animated.Value(0.94)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -34,21 +34,21 @@ export function Reveal({
         toValue: 1,
         duration,
         delay,
-        easing: Easing.out(Easing.cubic),
+        easing: Easing.out(Easing.poly(4)),
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
         duration,
         delay,
-        easing: Easing.out(Easing.cubic),
+        easing: Easing.out(Easing.poly(4)),
         useNativeDriver: true,
       }),
       Animated.spring(scale, {
         toValue: 1,
         delay,
-        friction: 8,
-        tension: 68,
+        friction: 7,
+        tension: 74,
         useNativeDriver: true,
       }),
     ]).start();
@@ -106,7 +106,7 @@ export function FloatingOrb({
   });
   const opacity = progress.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [0.38, 0.68, 0.45],
+    outputRange: [0.32, 0.74, 0.42],
   });
 
   return (
