@@ -58,9 +58,11 @@ npm start
 
 This project is configured for Expo EAS builds.
 
-Before building, replace the placeholder backend URL in `eas.json` with your deployed backend:
+This repo already points both EAS profiles at the deployed Render backend:
 
-`https://YOUR-BACKEND.onrender.com/api/v1`
+`https://sd-backend-and-model.onrender.com/api/v1`
+
+If you deploy a different backend later, update `EXPO_PUBLIC_API_BASE_URL` in `eas.json` before building.
 
 Install the EAS CLI and log in:
 

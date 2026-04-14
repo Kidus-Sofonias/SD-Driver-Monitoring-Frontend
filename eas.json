@@ -18,7 +18,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://YOUR-BACKEND.onrender.com/api/v1"
+        "EXPO_PUBLIC_API_BASE_URL": "https://sd-backend-and-model.onrender.com/api/v1"
       }
     }
   }

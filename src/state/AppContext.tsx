@@ -1,6 +1,6 @@
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { DEFAULT_API_BASE_URL, normalizeApiBaseUrl } from "../config/constants";
+import { DEFAULT_API_BASE_URL, normalizeApiBaseUrl, normalizeConfiguredApiBaseUrl } from "../config/constants";
 import type { LanguageMode } from "../i18n";
 import * as api from "../lib/api";
 import {
@@ -157,7 +157,7 @@ function isLocalApiUrl(url: string | null | undefined) {
 
 function resolveBootstrapApiBaseUrl(storedApiBaseUrl: string | null, defaultApiBaseUrl: string) {
   const normalizedDefault = normalizeApiBaseUrl(defaultApiBaseUrl);
-  const normalizedStored = storedApiBaseUrl ? normalizeApiBaseUrl(storedApiBaseUrl) : "";
+  const normalizedStored = normalizeConfiguredApiBaseUrl(storedApiBaseUrl);
 
   if (!normalizedStored) {
     return normalizedDefault;

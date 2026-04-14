@@ -1,6 +1,25 @@
 import { Platform } from "react-native";
 
 const API_V1_PATH = "/api/v1";
+export const DEPLOYED_API_BASE_URL = "https://sd-backend-and-model.onrender.com/api/v1";
+
+export function isPlaceholderApiBaseUrl(rawUrl: string | null | undefined) {
+  const value = rawUrl?.trim();
+  if (!value) {
+    return false;
+  }
+
+  return /your-backend|example\.com|<[^>]+>/i.test(value);
+}
+
+export function normalizeConfiguredApiBaseUrl(rawUrl: string | null | undefined) {
+  const value = rawUrl?.trim();
+  if (!value || isPlaceholderApiBaseUrl(value)) {
+    return "";
+  }
+
+  return normalizeApiBaseUrl(value);
+}
 
 function stripPort(host: string) {
   const trimmed = host.trim();
@@ -35,21 +54,25 @@ function inferLanHostFromExpoConfig() {
 }
 
 function buildDefaultApiBaseUrl() {
-  const envValue = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  const envValue = normalizeConfiguredApiBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL);
   if (envValue) {
-    return normalizeApiBaseUrl(envValue);
+    return envValue;
   }
 
   const lanHost = inferLanHostFromExpoConfig();
-  if (lanHost) {
+  if (__DEV__ && lanHost) {
     return `http://${lanHost}:8000/api/v1`;
   }
 
-  if (Platform.OS === "android") {
+  if (__DEV__) {
+    if (Platform.OS === "android") {
+      return "http://10.0.2.2:8000/api/v1";
+    }
+
     return "http://127.0.0.1:8000/api/v1";
   }
 
-  return "http://127.0.0.1:8000/api/v1";
+  return DEPLOYED_API_BASE_URL;
 }
 
 export function normalizeApiBaseUrl(rawUrl: string) {
