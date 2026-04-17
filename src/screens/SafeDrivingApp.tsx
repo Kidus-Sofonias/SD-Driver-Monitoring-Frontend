@@ -53,6 +53,8 @@ export function SafeDrivingApp() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [pageErrorSource, setPageErrorSource] = useState<string | null>(null);
   const drawerTranslate = useRef(new Animated.Value(-320)).current;
+  const drawerScrollRef = useRef<ScrollView | null>(null);
+  const pageScrollRef = useRef<ScrollView | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activePageKey = session ? tab : "auth";
@@ -109,6 +111,13 @@ export function SafeDrivingApp() {
       useNativeDriver: true,
     }).start();
   }, [drawerTranslate, menuOpen]);
+
+  useEffect(() => {
+    pageScrollRef.current?.scrollTo({ x: 0, y: 0, animated: false });
+    if (!menuOpen) {
+      drawerScrollRef.current?.scrollTo({ x: 0, y: 0, animated: false });
+    }
+  }, [activePageKey, menuOpen]);
 
   useEffect(() => {
     return () => {
@@ -255,6 +264,7 @@ export function SafeDrivingApp() {
         >
           <Card style={styles.drawerCard}>
             <ScrollView
+              ref={drawerScrollRef}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.drawerScrollContent}
               style={styles.drawerScroll}
@@ -311,7 +321,12 @@ export function SafeDrivingApp() {
         </Animated.View>
       ) : null}
 
-      <ScrollView style={styles.pageScroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={pageScrollRef}
+        style={styles.pageScroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.pageContainer}>
           {pageError ? (
             <Pressable

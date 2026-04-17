@@ -11,6 +11,8 @@
     "start:localhost:clear": "expo start --localhost --clear",
     "usb:reverse": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-usb-reverse.ps1",
     "start:usb": "npm run usb:reverse && npm run start:localhost:clear",
+    "emulator:start": "powershell -ExecutionPolicy Bypass -File ./scripts/start-android-emulator.ps1",
+    "android:emulator": "npm run emulator:start && expo start --android",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
