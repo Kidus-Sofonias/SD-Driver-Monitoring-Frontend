@@ -17,7 +17,7 @@
       ]
     ],
     "android": {
-      "package": "com.safe.driving.mobile",
+      "package": "com.driverpulse",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#04101B"
@@ -28,7 +28,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.safe.driving.mobile",
+      "bundleIdentifier": "com.driverpulse",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

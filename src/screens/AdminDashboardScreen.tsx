@@ -32,26 +32,27 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
   const { width } = useWindowDimensions();
   const { t, translateDynamic } = useI18n();
   const { reviewItems } = useApp();
+  const safeReviewItems = Array.isArray(reviewItems) ? reviewItems : [];
   const isWide = width >= 1080;
 
   const analytics = useMemo(() => {
-    const totalTrips = reviewItems.length;
-    const pendingReviews = reviewItems.filter((item) => item.review_label === null || item.review_label === undefined).length;
+    const totalTrips = safeReviewItems.length;
+    const pendingReviews = safeReviewItems.filter((item) => item.review_label === null || item.review_label === undefined).length;
     const riskCounts = {
-      low: reviewItems.filter((item) => item.risk_level === "low").length,
-      medium: reviewItems.filter((item) => item.risk_level === "medium").length,
-      high: reviewItems.filter((item) => item.risk_level === "high").length,
+      low: safeReviewItems.filter((item) => item.risk_level === "low").length,
+      medium: safeReviewItems.filter((item) => item.risk_level === "medium").length,
+      high: safeReviewItems.filter((item) => item.risk_level === "high").length,
     };
 
     const scoreBuckets = [
-      { label: "0-39", count: reviewItems.filter((item) => (item.score ?? -1) >= 0 && (item.score ?? -1) < 40).length },
-      { label: "40-59", count: reviewItems.filter((item) => (item.score ?? -1) >= 40 && (item.score ?? -1) < 60).length },
-      { label: "60-79", count: reviewItems.filter((item) => (item.score ?? -1) >= 60 && (item.score ?? -1) < 80).length },
-      { label: "80-100", count: reviewItems.filter((item) => (item.score ?? -1) >= 80).length },
+      { label: "0-39", count: safeReviewItems.filter((item) => (item.score ?? -1) >= 0 && (item.score ?? -1) < 40).length },
+      { label: "40-59", count: safeReviewItems.filter((item) => (item.score ?? -1) >= 40 && (item.score ?? -1) < 60).length },
+      { label: "60-79", count: safeReviewItems.filter((item) => (item.score ?? -1) >= 60 && (item.score ?? -1) < 80).length },
+      { label: "80-100", count: safeReviewItems.filter((item) => (item.score ?? -1) >= 80).length },
     ];
 
     const driverMap = new Map<string, DriverAggregate>();
-    for (const item of reviewItems) {
+    for (const item of safeReviewItems) {
       const email = item.driver_email || translateDynamic("unknown");
       const current = driverMap.get(email) || {
         email,
@@ -91,14 +92,14 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
       })
       .slice(0, 3);
 
-    const recentTrips = [...reviewItems].slice(0, 6);
+    const recentTrips = [...safeReviewItems].slice(0, 6);
     const avgScore =
       totalTrips > 0
-        ? Math.round(reviewItems.reduce((sum, item) => sum + (item.score ?? 0), 0) / totalTrips)
+        ? Math.round(safeReviewItems.reduce((sum, item) => sum + (item.score ?? 0), 0) / totalTrips)
         : 0;
     const avgConfidence =
       totalTrips > 0
-        ? reviewItems.reduce((sum, item) => sum + (item.confidence ?? 0), 0) / totalTrips
+        ? safeReviewItems.reduce((sum, item) => sum + (item.confidence ?? 0), 0) / totalTrips
         : 0;
 
     return {
@@ -112,7 +113,7 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
       avgScore,
       avgConfidence,
     };
-  }, [reviewItems, translateDynamic]);
+  }, [safeReviewItems, translateDynamic]);
 
   const riskSegments = [
     { label: translateDynamic("low"), value: analytics.riskCounts.low, color: colors.lowRisk },
@@ -264,7 +265,9 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
                 <View style={[styles.recentRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
                   <View style={styles.driverMeta}>
                     <Text style={[styles.driverLabel, { color: colors.heading }]}>{trip.driver_email || trip.trip_id}</Text>
-                    <Text style={[styles.driverSubtle, { color: colors.muted }]}>{trip.trip_id.slice(0, 8)}... • {trip.generated_event_count} {t("events").toLowerCase()}</Text>
+                    <Text style={[styles.driverSubtle, { color: colors.muted }]}>
+                      {trip.trip_id.slice(0, 8)}... {"|"} {trip.generated_event_count} {t("events").toLowerCase()}
+                    </Text>
                   </View>
                   <View style={styles.statRow}>
                     <StatusPill label={`${trip.score ?? "--"}`} tone="neutral" />

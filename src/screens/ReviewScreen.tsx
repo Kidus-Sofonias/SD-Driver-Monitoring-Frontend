@@ -15,6 +15,9 @@ export function ReviewScreen() {
   const colors = useThemeColors();
   const { t, translateDynamic } = useI18n();
   const { busy, loadReview, reviewItems, selectedReview, submitReview } = useApp();
+  const safeReviewItems = Array.isArray(reviewItems) ? reviewItems : [];
+  const selectedReasons = Array.isArray(selectedReview?.reasons) ? selectedReview.reasons : [];
+  const selectedEvents = Array.isArray(selectedReview?.events) ? selectedReview.events : [];
   const [notes, setNotes] = useState("");
 
   async function loadTrip(tripId: string) {
@@ -30,16 +33,18 @@ export function ReviewScreen() {
           <Text style={[styles.sectionTitle, { color: colors.heading }]}>{t("review_dashboard")}</Text>
         </View>
         <StatusPill
-          label={t("items_need_review", { count: reviewItems.filter((item) => item.review_label === null || item.review_label === undefined).length })}
+          label={t("items_need_review", {
+            count: safeReviewItems.filter((item) => item.review_label === null || item.review_label === undefined).length
+          })}
           tone="warn"
         />
       </View>
-      {reviewItems.length === 0 ? (
+      {safeReviewItems.length === 0 ? (
         <Card>
           <Text style={[styles.emptyText, { color: colors.text }]}>{t("review_empty")}</Text>
         </Card>
       ) : (
-        reviewItems.map((item) => (
+        safeReviewItems.map((item) => (
           <Pressable key={item.trip_id} onPress={() => loadTrip(item.trip_id)}>
             <Card>
               <View style={styles.row}>
@@ -50,17 +55,16 @@ export function ReviewScreen() {
                 </View>
                 <StatusPill
                   label={translateDynamic(titleCase(item.risk_level || "unknown"))}
-                  tone={
-                    item.risk_level === "low"
-                      ? "good"
-                      : item.risk_level === "medium"
-                        ? "warn"
-                        : "bad"
-                  }
+                  tone={item.risk_level === "low" ? "good" : item.risk_level === "medium" ? "warn" : "bad"}
                 />
               </View>
-              <Text style={[styles.meta, { color: colors.text }]}>{`${t("today_score")} ${item.score ?? "--"} | ${t("confidence")} ${formatConfidence(item.confidence)}`}</Text>
-              <Text style={[styles.reasonLine, { color: colors.text }]}>{item.reasons.map((reason) => translateDynamic(reason)).join(" | ") || translateDynamic("No reasons generated.")}</Text>
+              <Text style={[styles.meta, { color: colors.text }]}>
+                {`${t("today_score")} ${item.score ?? "--"} | ${t("confidence")} ${formatConfidence(item.confidence)}`}
+              </Text>
+              <Text style={[styles.reasonLine, { color: colors.text }]}>
+                {(Array.isArray(item.reasons) ? item.reasons : []).map((reason) => translateDynamic(reason)).join(" | ") ||
+                  translateDynamic("No reasons generated.")}
+              </Text>
             </Card>
           </Pressable>
         ))
@@ -74,9 +78,11 @@ export function ReviewScreen() {
           {selectedReview.driver_email ? <Text style={[styles.meta, { color: colors.text }]}>{selectedReview.driver_email}</Text> : null}
           <Text style={[styles.meta, { color: colors.text }]}>{`${t("predicted_label")}: ${selectedReview.predicted_label ?? "--"}`}</Text>
           <Text style={[styles.meta, { color: colors.text }]}>{`${t("rule_score")}: ${selectedReview.rule_score ?? "--"}`}</Text>
-          <Text style={[styles.reasonLine, { color: colors.text }]}>{selectedReview.reasons.map((reason) => translateDynamic(reason)).join(" | ")}</Text>
+          <Text style={[styles.reasonLine, { color: colors.text }]}>
+            {selectedReasons.map((reason) => translateDynamic(reason)).join(" | ") || translateDynamic("No reasons generated.")}
+          </Text>
           <Text style={[styles.meta, { color: colors.text }]}>
-            {`${t("events_label")}: ${selectedReview.events.map((event) => translateDynamic(titleCase(event.event_type))).join(", ") || t("no_events")}`}
+            {`${t("events_label")}: ${selectedEvents.map((event) => translateDynamic(titleCase(event.event_type))).join(", ") || t("no_events")}`}
           </Text>
           <TextField
             label={t("review_notes")}

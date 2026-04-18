@@ -20,6 +20,8 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
   const { t } = useI18n();
   const { width } = useWindowDimensions();
   const { adminDrivers, reviewItems, busy, deleteAdminDriver, saveAdminDriverCredentials } = useApp();
+  const safeAdminDrivers = Array.isArray(adminDrivers) ? adminDrivers : [];
+  const safeReviewItems = Array.isArray(reviewItems) ? reviewItems : [];
   const [editingDriver, setEditingDriver] = useState<AdminDriver | null>(null);
   const [deletingDriver, setDeletingDriver] = useState<AdminDriver | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,7 +31,7 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
 
   const driverPressure = useMemo(() => {
     const byDriverId = new Map<string, { pendingReviews: number; highRiskTrips: number; averageScore: number; scoreCount: number }>();
-    for (const item of reviewItems) {
+    for (const item of safeReviewItems) {
       if (!item.driver_user_id) {
         continue;
       }
@@ -53,15 +55,15 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
       });
     }
     return byDriverId;
-  }, [reviewItems]);
+  }, [safeReviewItems]);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const visibleDrivers = useMemo(() => {
     if (!normalizedSearch) {
-      return adminDrivers;
+      return safeAdminDrivers;
     }
-    return adminDrivers.filter((driver) => driver.email.toLowerCase().includes(normalizedSearch));
-  }, [adminDrivers, normalizedSearch]);
+    return safeAdminDrivers.filter((driver) => (driver.email || "").toLowerCase().includes(normalizedSearch));
+  }, [safeAdminDrivers, normalizedSearch]);
 
   function openEdit(driver: AdminDriver) {
     setEditingDriver(driver);
@@ -105,7 +107,7 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
         <View style={[styles.headerRow, isCompact ? styles.headerRowStack : null]}>
           <View style={[styles.headerCopy, isCompact ? styles.headerCopyStack : null]}>
             <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("all_drivers")}</Text>
-            <Text style={[styles.title, { color: colors.heading }]}>{t("active_accounts", { count: formatWholeNumber(adminDrivers.length) })}</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("active_accounts", { count: formatWholeNumber(safeAdminDrivers.length) })}</Text>
           </View>
           <View style={[styles.searchWrap, isCompact ? styles.searchWrapStack : null]}>
             <TextField
@@ -154,7 +156,7 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
                         onPress={() => openEdit(driver)}
                         style={[styles.iconButton, { borderColor: colors.accentStrong, backgroundColor: colors.accent }]}
                       >
-                        <Text style={[styles.iconLabel, { color: colors.accentStrong }]}>✎</Text>
+                        <Text style={[styles.iconLabel, { color: colors.accentStrong }]}>Edit</Text>
                       </Pressable>
                       <Pressable
                         accessibilityRole="button"
@@ -162,7 +164,7 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
                         onPress={() => setDeletingDriver(driver)}
                         style={[styles.iconButton, { borderColor: "#D3505D", backgroundColor: "rgba(211,80,93,0.14)" }]}
                       >
-                        <Text style={[styles.iconLabel, { color: "#C23A48" }]}>🗑</Text>
+                        <Text style={[styles.iconLabel, { color: "#C23A48" }]}>Del</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -171,7 +173,7 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
             })
           ) : (
             <Text style={[styles.emptyText, { color: colors.muted }]}>
-              {adminDrivers.length ? t("no_drivers_match_search") : t("no_driver_accounts")}
+              {safeAdminDrivers.length ? t("no_drivers_match_search") : t("no_driver_accounts")}
             </Text>
           )}
         </View>
@@ -323,17 +325,19 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   iconButton: {
-    width: 40,
+    minWidth: 40,
     height: 40,
     borderRadius: radius.pill,
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: spacing.sm,
   },
   iconLabel: {
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: "700",
-    lineHeight: 20,
+    lineHeight: 14,
+    textTransform: "uppercase",
   },
   scoreLabel: {
     fontSize: type.title,
