@@ -27,6 +27,7 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
   const [, setNow] = useState(Date.now());
   const {
     activeTrip,
+    bufferedSampleCount,
     captureMode,
     endTrip,
     latestResult,
@@ -127,6 +128,7 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
               }
             />
             <MetricTile label={t("samples_uploaded")} value={formatWholeNumber(uploadedBurstCount)} />
+            <MetricTile label={t("samples_queued")} value={formatWholeNumber(bufferedSampleCount)} />
             <MetricTile
               label={t("sync_status")}
               value={activeTrip ? translateDynamic(titleCase(captureMode)) : pendingFinalizeTrip ? t("paused") : t("idle")}
@@ -143,7 +145,11 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
             <View style={[styles.uploadText, shouldStackUploadHealth ? styles.uploadTextStack : null]}>
               <Text style={[styles.uploadTitle, { color: colors.heading }]}>{t("current_upload_health")}</Text>
               <Text style={[styles.uploadMeta, { color: colors.muted }]}>
-                {activeTrip ? "Sensors are streaming and batches are syncing to the backend." : pendingFinalizeTrip ? "Trip capture has stopped and is waiting for final processing." : "Start a trip to begin collecting data."}
+                {activeTrip
+                  ? `${uploadedBurstCount} ${t("samples_uploaded").toLowerCase()} | ${bufferedSampleCount} ${t("samples_queued").toLowerCase()}`
+                  : pendingFinalizeTrip
+                    ? t("trip_ready_processing")
+                    : t("start_trip_prompt")}
               </Text>
             </View>
             {activeTrip ? (

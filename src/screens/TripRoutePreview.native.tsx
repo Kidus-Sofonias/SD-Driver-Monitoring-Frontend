@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 
+import { cleanRoutePoints } from "../lib/route";
 import type { DrivingEvent, TripRoutePoint } from "../types/api";
 import { radius, spacing, type } from "../theme/tokens";
 
@@ -14,11 +15,12 @@ type Props = {
 
 export function RoutePreview({ points, events = [], height = 280, showLegend = true }: Props) {
   const mapRef = useRef<MapView | null>(null);
+  const cleanedPoints = useMemo(() => cleanRoutePoints(points), [points]);
   const routeCoordinates = useMemo(
-    () => points.map((point) => ({ latitude: point.lat, longitude: point.lon })),
-    [points]
+    () => cleanedPoints.map((point) => ({ latitude: point.lat, longitude: point.lon })),
+    [cleanedPoints]
   );
-  const eventMarkers = useMemo(() => mapEventsToRoutePoints(points, events), [events, points]);
+  const eventMarkers = useMemo(() => mapEventsToRoutePoints(cleanedPoints, events), [cleanedPoints, events]);
 
   useEffect(() => {
     if (!mapRef.current || routeCoordinates.length < 2) {
@@ -48,7 +50,7 @@ export function RoutePreview({ points, events = [], height = 280, showLegend = t
       <MapView
         ref={mapRef}
         style={[styles.map, { height }]}
-        initialRegion={buildRouteRegion(points)}
+        initialRegion={buildRouteRegion(cleanedPoints)}
         mapType="standard"
         showsCompass
         showsBuildings

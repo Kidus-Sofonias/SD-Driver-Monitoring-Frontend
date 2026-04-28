@@ -6,7 +6,7 @@ import { MetricTile } from "../components/MetricTile";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
-import { formatDateTime, formatDurationSince, formatPercent, formatTimeAgo, titleCase } from "../lib/format";
+import { formatDateTime, formatDurationSince, formatPercent, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -23,6 +23,7 @@ export function DriveScreen({ onOpenResults }: Props) {
   const {
     activeTrip,
     busy,
+    bufferedSampleCount,
     captureMode,
     endTrip,
     finalizeTrip,
@@ -35,6 +36,18 @@ export function DriveScreen({ onOpenResults }: Props) {
   } = useApp();
   const isWide = width >= 980;
   const shouldStackUploadHealth = width < 900;
+  const uploadHealthValue = lastUploadAt
+    ? t("last_synced_time", { time: formatDateTime(lastUploadAt) })
+    : uploadedBurstCount > 0
+      ? `${uploadedBurstCount} ${t("samples_uploaded").toLowerCase()}`
+    : bufferedSampleCount > 0
+      ? t("samples_waiting_sync", { count: bufferedSampleCount })
+      : t("uploading_live_samples");
+  const uploadHealthNote = activeTrip
+    ? `${uploadedBurstCount} ${t("samples_uploaded").toLowerCase()} | ${bufferedSampleCount} ${t("samples_queued").toLowerCase()}`
+    : bufferedSampleCount > 0
+      ? t("samples_waiting_sync", { count: bufferedSampleCount })
+      : t("trip_ready_processing");
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -52,11 +65,12 @@ export function DriveScreen({ onOpenResults }: Props) {
             <View style={[styles.metricsRow, !isWide ? styles.metricsStack : null]}>
               <MetricTile label={t("elapsed_time")} value={formatDurationSince(activeTrip.started_at)} />
               <MetricTile label={t("samples_uploaded")} value={String(uploadedBurstCount)} />
+              <MetricTile label={t("samples_queued")} value={String(bufferedSampleCount)} />
               <MetricTile label={t("sync_status")} value={translateDynamic(titleCase(captureMode))} />
             </View>
             <View style={[styles.metricsRow, !isWide ? styles.metricsStack : null]}>
               <MetricTile label={t("started")} value={formatDateTime(activeTrip.started_at)} />
-              <MetricTile label={t("current_upload_health")} value={formatTimeAgo(lastUploadAt)} />
+              <MetricTile label={t("current_upload_health")} value={uploadHealthValue} />
             </View>
             <View
               style={[
@@ -67,6 +81,7 @@ export function DriveScreen({ onOpenResults }: Props) {
             >
               <View style={[styles.uploadText, shouldStackUploadHealth ? styles.uploadTextStack : null]}>
                 <Text style={[styles.uploadTitle, { color: colors.heading }]}>{t("current_upload_health")}</Text>
+                <Text style={[styles.note, { color: colors.muted }]}>{uploadHealthNote}</Text>
               </View>
               <View style={[styles.actionRow, shouldStackUploadHealth ? styles.actionRowStack : null]}>
                 <View style={[styles.actionButtonSlot, shouldStackUploadHealth ? styles.actionButtonSlotStack : null]}>
@@ -87,6 +102,7 @@ export function DriveScreen({ onOpenResults }: Props) {
             </View>
             <View style={[styles.metricsRow, !isWide ? styles.metricsStack : null]}>
               <MetricTile label={t("samples_uploaded")} value={String(uploadedBurstCount)} />
+              <MetricTile label={t("samples_queued")} value={String(bufferedSampleCount)} />
               <MetricTile label={t("sync_status")} value={translateDynamic(titleCase(captureMode === "idle" ? "paused" : captureMode))} />
             </View>
             <PrimaryButton label={t("finalize_trip")} onPress={finalizeTrip} loading={busy} />

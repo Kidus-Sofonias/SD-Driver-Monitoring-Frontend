@@ -71,6 +71,9 @@ type AppContextValue = AppState & {
 
 const AppContext = createContext<AppContextValue | null>(null);
 const EMPTY_TRIP_FINALIZE_MESSAGE = "Not enough samples collected. Trip can't be finalized.";
+const COLLECTOR_SNAPSHOT_INTERVAL_MS = 1000;
+const AUTO_UPLOAD_INTERVAL_MS = 4000;
+const AUTO_UPLOAD_MIN_BUFFERED_SAMPLES = 4;
 
 function pickPendingFinalizeTrip(trips: Trip[], dismissedPendingTripIds: string[]) {
   return (
@@ -176,6 +179,8 @@ function resolveBootstrapApiBaseUrl(storedApiBaseUrl: string | null, defaultApiB
 
 export function AppProvider({ children }: PropsWithChildren) {
   const collectorRef = useRef(createPhoneSensorCollector());
+  const autoUploadInFlightRef = useRef(false);
+  const lastAutoUploadAttemptAtRef = useRef(0);
   const [state, setState] = useState<AppState>({
     booting: true,
     busy: false,
@@ -202,6 +207,11 @@ export function AppProvider({ children }: PropsWithChildren) {
     themeMode: "dark",
     languageMode: "en"
   });
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   function dismissPendingTrip(tripId: string) {
     setState((current) => {
@@ -223,6 +233,47 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void bootstrap();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const snapshot = collectorRef.current.snapshot();
+
+      setState((current) => {
+        if (current.captureMode === snapshot.mode && current.bufferedSampleCount === snapshot.bufferedCount) {
+          return current;
+        }
+
+        return {
+          ...current,
+          captureMode: snapshot.mode,
+          bufferedSampleCount: snapshot.bufferedCount,
+        };
+      });
+
+      const current = stateRef.current;
+      if (!current.session || !current.activeTrip || autoUploadInFlightRef.current) {
+        return;
+      }
+
+      if (snapshot.bufferedCount <= 0) {
+        return;
+      }
+
+      const now = Date.now();
+      const shouldUpload =
+        snapshot.bufferedCount >= AUTO_UPLOAD_MIN_BUFFERED_SAMPLES ||
+        now - lastAutoUploadAttemptAtRef.current >= AUTO_UPLOAD_INTERVAL_MS;
+
+      if (!shouldUpload) {
+        return;
+      }
+
+      lastAutoUploadAttemptAtRef.current = now;
+      void uploadPendingSamples({ background: true, suppressEmptyError: true });
+    }, COLLECTOR_SNAPSHOT_INTERVAL_MS);
+
+    return () => clearInterval(timer);
   }, []);
 
   async function hydrateRemoteState(apiBaseUrl: string, initialSession: Session | null) {
@@ -486,6 +537,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           uploadedBurstCount: 0,
           lastUploadAt: null
         }));
+        lastAutoUploadAttemptAtRef.current = 0;
         void saveDismissedPendingTripIds(state.dismissedPendingTripIds.filter((id) => id !== trip.id));
         await refreshAllInternal(state.apiBaseUrl, state.session as Session);
       } catch (error) {
@@ -495,30 +547,74 @@ export function AppProvider({ children }: PropsWithChildren) {
     });
   }
 
+  async function uploadPendingSamples(options?: {
+    background?: boolean;
+    suppressEmptyError?: boolean;
+  }) {
+    const current = stateRef.current;
+    if (!current.session || !current.activeTrip || autoUploadInFlightRef.current) {
+      return 0;
+    }
+
+    autoUploadInFlightRef.current = true;
+    const samples = collectorRef.current.drainSamples({ fallbackToDemo: false });
+    const drainedSnapshot = collectorRef.current.snapshot();
+
+    setState((prev) => ({
+      ...prev,
+      captureMode: drainedSnapshot.mode,
+      bufferedSampleCount: drainedSnapshot.bufferedCount,
+    }));
+
+    if (!samples.length) {
+      autoUploadInFlightRef.current = false;
+      if (!options?.suppressEmptyError) {
+        throw new Error("Waiting for the first live sensor samples.");
+      }
+      return 0;
+    }
+
+    try {
+      const uploadResult = await api.uploadSamples(
+        current.apiBaseUrl,
+        current.session.token.access_token,
+        current.activeTrip.id,
+        samples
+      );
+      const collectorSnapshot = collectorRef.current.snapshot();
+      setState((prev) => ({
+        ...prev,
+        captureMode: collectorSnapshot.mode,
+        bufferedSampleCount: collectorSnapshot.bufferedCount,
+        uploadedBurstCount: prev.uploadedBurstCount + uploadResult.inserted,
+        lastUploadAt: new Date().toISOString(),
+      }));
+      return uploadResult.inserted;
+    } catch (error) {
+      const restoredSnapshot = collectorRef.current.restoreSamples(samples);
+      setState((prev) => ({
+        ...prev,
+        captureMode: restoredSnapshot.mode,
+        bufferedSampleCount: restoredSnapshot.bufferedCount,
+        error: options?.background ? prev.error : getErrorMessage(error),
+      }));
+
+      if (!options?.background) {
+        throw error;
+      }
+
+      return 0;
+    } finally {
+      autoUploadInFlightRef.current = false;
+    }
+  }
+
   async function uploadSensorBatch() {
     if (!state.session || !state.activeTrip) {
       return;
     }
     await runBusy(async () => {
-      const samples = collectorRef.current.drainSamples();
-      if (!samples.length) {
-        throw new Error("Waiting for the first live sensor samples.");
-      }
-      const uploadResult = await api.uploadSamples(
-        state.apiBaseUrl,
-        state.session!.token.access_token,
-        state.activeTrip!.id,
-        samples
-      );
-      const collectorSnapshot = collectorRef.current.snapshot();
-      setState((current) => ({
-        ...current,
-        captureMode: collectorSnapshot.mode,
-        bufferedSampleCount: collectorSnapshot.bufferedCount,
-        uploadedBurstCount: current.uploadedBurstCount + uploadResult.inserted,
-        lastUploadAt: new Date().toISOString()
-      }));
-      await refreshAllInternal(state.apiBaseUrl, state.session as Session);
+      await uploadPendingSamples();
     });
   }
 
@@ -527,20 +623,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       return;
     }
     await runBusy(async () => {
-      const pendingSamples = collectorRef.current.drainSamples({ fallbackToDemo: false });
-      if (pendingSamples.length) {
-        const uploadResult = await api.uploadSamples(
-          state.apiBaseUrl,
-          state.session!.token.access_token,
-          state.activeTrip!.id,
-          pendingSamples
-        );
-        setState((current) => ({
-          ...current,
-          uploadedBurstCount: current.uploadedBurstCount + uploadResult.inserted,
-          lastUploadAt: new Date().toISOString()
-        }));
-      }
+      await uploadPendingSamples({ suppressEmptyError: true });
       const trip = await api.endTrip(
         state.apiBaseUrl,
         state.session!.token.access_token,
@@ -566,6 +649,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     }
     await runBusy(async () => {
       const tripToFinalize = state.pendingFinalizeTrip || state.activeTrip;
+      await uploadPendingSamples({ suppressEmptyError: true });
       const serverSampleCount = (await api.getTripSampleCount(
         state.apiBaseUrl,
         state.session!.token.access_token,

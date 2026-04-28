@@ -227,6 +227,16 @@ export class PhoneSensorCollector {
     return [];
   }
 
+  restoreSamples(samples: SensorSample[]) {
+    if (!samples.length) {
+      return this.snapshot();
+    }
+
+    this.samples = [...samples, ...this.samples];
+    this.lastSampleAt = this.samples[this.samples.length - 1]?.timestamp ?? this.lastSampleAt;
+    return this.snapshot();
+  }
+
   async stop(): Promise<SensorCaptureSnapshot> {
     await this.stopSubscriptions();
     this.collecting = false;

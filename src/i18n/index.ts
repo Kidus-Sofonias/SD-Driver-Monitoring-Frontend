@@ -55,6 +55,7 @@ type TranslationKey =
   | "elapsed_time"
   | "ended_at"
   | "samples_uploaded"
+  | "samples_queued"
   | "sync_status"
   | "live"
   | "paused"
@@ -166,7 +167,10 @@ type TranslationKey =
   | "finalize_trip"
   | "open_trip_results"
   | "no_active_trip_prompt"
-  | "sync_sensor_batch";
+  | "sync_sensor_batch"
+  | "uploading_live_samples"
+  | "samples_waiting_sync"
+  | "last_synced_time";
 
 const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -222,6 +226,7 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     elapsed_time: "Elapsed time",
     ended_at: "Ended at",
     samples_uploaded: "Samples uploaded",
+    samples_queued: "Samples queued",
     sync_status: "Sync status",
     live: "Live",
     paused: "Paused",
@@ -334,6 +339,9 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     open_trip_results: "Open trip results",
     no_active_trip_prompt: "No active trip right now. Start a trip to begin tracking.",
     sync_sensor_batch: "Sync sensor batch",
+    uploading_live_samples: "Collecting live samples",
+    samples_waiting_sync: "{count} samples waiting to sync",
+    last_synced_time: "Last synced {time}",
   },
   am: {
     home: "መነሻ",

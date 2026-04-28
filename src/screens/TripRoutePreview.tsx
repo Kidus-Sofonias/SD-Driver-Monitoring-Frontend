@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 
+import { cleanRoutePoints } from "../lib/route";
 import type { DrivingEvent, TripRoutePoint } from "../types/api";
 import { radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -33,10 +34,14 @@ export function RoutePreview({ points, events = [], height = 220, showLegend = t
   const [leafletError, setLeafletError] = useState<string | null>(null);
   const canvasHeight = height;
   const padding = 18;
-  const projected = useMemo(() => projectRoute(points, canvasWidth, canvasHeight, padding), [canvasHeight, canvasWidth, padding, points]);
-  const routeCoordinates = useMemo(() => points.map((point) => [point.lat, point.lon] as [number, number]), [points]);
-  const eventMarkers = useMemo(() => mapEventsToRoutePoints(points, events), [events, points]);
-  const projectedEvents = useMemo(() => projectEventMarkers(eventMarkers, points, projected.points), [eventMarkers, points, projected.points]);
+  const cleanedPoints = useMemo(() => cleanRoutePoints(points), [points]);
+  const projected = useMemo(() => projectRoute(cleanedPoints, canvasWidth, canvasHeight, padding), [canvasHeight, canvasWidth, cleanedPoints, padding]);
+  const routeCoordinates = useMemo(() => cleanedPoints.map((point) => [point.lat, point.lon] as [number, number]), [cleanedPoints]);
+  const eventMarkers = useMemo(() => mapEventsToRoutePoints(cleanedPoints, events), [cleanedPoints, events]);
+  const projectedEvents = useMemo(
+    () => projectEventMarkers(eventMarkers, cleanedPoints, projected.points),
+    [cleanedPoints, eventMarkers, projected.points]
+  );
 
   useEffect(() => {
     let active = true;
@@ -87,7 +92,7 @@ export function RoutePreview({ points, events = [], height = 220, showLegend = t
     return (
       <LeafletRouteMap
         bundle={leafletBundle}
-        points={points}
+        points={cleanedPoints}
         routeCoordinates={routeCoordinates}
         eventMarkers={eventMarkers}
         height={height}
@@ -362,7 +367,7 @@ function eventShortLabel(eventType: string) {
 }
 
 function eventTooltip(event: DrivingEvent) {
-  return `${humanizeEventType(event.event_type)} • value ${Math.round(event.value)}`;
+  return `${humanizeEventType(event.event_type)} - value ${Math.round(event.value)}`;
 }
 
 function eventToneColor(eventType: string) {

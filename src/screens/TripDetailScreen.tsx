@@ -8,6 +8,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
 import { formatConfidence, formatDateTime, formatPercent, titleCase } from "../lib/format";
+import { cleanRoutePoints, haversineKm } from "../lib/route";
 import { useApp } from "../state/AppContext";
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -26,6 +27,7 @@ export function TripDetailScreen({ onBack }: Props) {
   const [mapOpen, setMapOpen] = useState(false);
   const isWide = width >= 980;
   const detail = selectedReview ?? selectedTripDetail;
+  const cleanedRoutePoints = selectedTripRoute ? cleanRoutePoints(selectedTripRoute.points) : [];
 
   if (!detail) {
     return (
@@ -120,15 +122,15 @@ export function TripDetailScreen({ onBack }: Props) {
             </View>
             <View style={[styles.metricsRow, !isWide ? styles.metricsStack : null]}>
               <MetricTile label="GPS points" value={selectedTripRoute.point_count.toString()} />
-              <MetricTile label="Distance" value={formatDistanceKm(selectedTripRoute.points)} />
-              <MetricTile label="Avg speed" value={formatAverageSpeedKph(selectedTripRoute.points)} />
+              <MetricTile label="Distance" value={formatDistanceKm(cleanedRoutePoints)} />
+              <MetricTile label="Avg speed" value={formatAverageSpeedKph(cleanedRoutePoints)} />
             </View>
             <View style={[styles.routeMetaRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
               <Text style={[styles.routeMetaText, { color: colors.text }]}>
-                Start: {formatDateTime(selectedTripRoute.points[0]?.ts)}
+                Start: {formatDateTime(cleanedRoutePoints[0]?.ts || selectedTripRoute.points[0]?.ts)}
               </Text>
               <Text style={[styles.routeMetaText, { color: colors.text }]}>
-                End: {formatDateTime(selectedTripRoute.points[selectedTripRoute.points.length - 1]?.ts)}
+                End: {formatDateTime(cleanedRoutePoints[cleanedRoutePoints.length - 1]?.ts || selectedTripRoute.points[selectedTripRoute.points.length - 1]?.ts)}
               </Text>
             </View>
           </View>
@@ -187,22 +189,6 @@ function formatAverageSpeedKph(points: TripRoutePoint[]) {
   }
   const average = speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length;
   return `${Math.round(average)} km/h`;
-}
-
-function haversineKm(start: Pick<TripRoutePoint, "lat" | "lon">, end: Pick<TripRoutePoint, "lat" | "lon">) {
-  const earthRadiusKm = 6371;
-  const dLat = toRadians(end.lat - start.lat);
-  const dLon = toRadians(end.lon - start.lon);
-  const startLat = toRadians(start.lat);
-  const endLat = toRadians(end.lat);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(startLat) * Math.cos(endLat) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function toRadians(value: number) {
-  return (value * Math.PI) / 180;
 }
 
 const styles = StyleSheet.create({
