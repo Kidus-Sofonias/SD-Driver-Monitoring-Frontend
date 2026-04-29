@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "DriverPulse",
+    "name": "Drive Pulse",
     "slug": "safe-driving-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -11,13 +11,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow DriverPulse to collect trip location while you are driving.",
+          "locationWhenInUsePermission": "Allow Drive Pulse to collect trip location while you are driving.",
           "isAndroidBackgroundLocationEnabled": false
         }
       ]
     ],
     "android": {
-      "package": "com.driverpulse",
+      "package": "com.drivepulse",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#04101B"
@@ -28,7 +28,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.driverpulse",
+      "bundleIdentifier": "com.drivepulse",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
