@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text } from "react-native";
 
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -11,6 +11,7 @@ type Props = {
 
 export function StatusPill({ label, tone = "neutral" }: Props) {
   const colors = useThemeColors();
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const backgroundStyle =
     tone === "good"
       ? { backgroundColor: "rgba(109,226,161,0.14)", borderWidth: 1, borderColor: "rgba(109,226,161,0.2)" }
@@ -28,10 +29,21 @@ export function StatusPill({ label, tone = "neutral" }: Props) {
           ? { color: colors.danger }
           : { color: colors.text };
 
+  // Spring animation on mount and when label changes
+  useEffect(() => {
+    scaleAnim.setValue(0.88);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 5,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [label, tone, scaleAnim]);
+
   return (
-    <View style={[styles.base, backgroundStyle]}>
+    <Animated.View style={[styles.base, backgroundStyle, { transform: [{ scale: scaleAnim }] }]}>
       <Text style={[styles.label, textStyle]}>{label}</Text>
-    </View>
+    </Animated.View>
   );
 }
 

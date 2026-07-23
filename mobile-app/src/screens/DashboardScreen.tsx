@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
 import { FloatingOrb, Reveal } from "../components/Motion";
@@ -65,8 +65,80 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
   const primaryActionLabel = activeTrip ? "Open live trip" : pendingFinalizeTrip ? "Finalize workflow" : "Start monitoring";
   const primaryActionHandler = activeTrip ? onOpenDrive : pendingFinalizeTrip ? onOpenDrive : onStartTrip;
 
+  // Today's Summary: aggregate stats from scored trips
+  const todaySummary = useMemo(() => {
+    const scored = scoredTrips;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const todayTrips = scored.filter((trip) => {
+      const tripTime = dateValueOf(trip.processed_at || trip.ended_at || trip.started_at);
+      return tripTime >= startOfToday;
+    });
+    const tripPool = todayTrips.length >= 3 ? todayTrips : scored.slice(0, 5);
+    const avgScore =
+      tripPool.length > 0
+        ? Math.round(tripPool.reduce((sum, trip) => sum + (trip.score ?? 0), 0) / tripPool.length)
+        : null;
+    const avgConfidence =
+      tripPool.length > 0
+        ? tripPool.reduce((sum, trip) => sum + (trip.confidence ?? 0), 0) / tripPool.length
+        : null;
+    const trend =
+      tripPool.length >= 2
+        ? tripPool[0].score ?? 0 > (tripPool[tripPool.length - 1].score ?? 0)
+          ? "up"
+          : tripPool[0].score ?? 0 < (tripPool[tripPool.length - 1].score ?? 0)
+            ? "down"
+            : "flat"
+        : "flat";
+    return { avgScore, avgConfidence, tripCount: tripPool.length, trend };
+  }, [scoredTrips]);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const summaryAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(summaryAnim, {
+      toValue: summaryExpanded ? 1 : 0,
+      duration: 280,
+      useNativeDriver: false,
+    }).start();
+  }, [summaryExpanded, summaryAnim]);
+
+  const summaryMaxHeight = summaryAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 200],
+  });
+
   return (
     <View style={styles.root}>
+      {/* Today's Summary — collapsible */}
+      <Card delay={40}>
+        <Pressable onPress={() => setSummaryExpanded((prev) => !prev)} style={styles.summaryHeader}>
+          <View style={styles.summaryHeaderLeft}>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("recent_trips")}</Text>
+            <View style={styles.summaryTitleRow}>
+              <Text style={[styles.summaryTitle, { color: colors.heading }]}>Today's Summary</Text>
+              {todaySummary.avgScore !== null ? (
+                <StatusPill
+                  label={`${todaySummary.avgScore} ${todaySummary.trend === "up" ? "↑" : todaySummary.trend === "down" ? "↓" : "→"}`}
+                  tone={todaySummary.trend === "up" ? "good" : todaySummary.trend === "down" ? "bad" : "neutral"}
+                />
+              ) : null}
+            </View>
+          </View>
+          <Text style={[styles.summaryChevron, { color: colors.muted }]}>{summaryExpanded ? "▲" : "▼"}</Text>
+        </Pressable>
+        <Animated.View style={{ maxHeight: summaryMaxHeight, overflow: "hidden" }}>
+          <View style={[styles.summaryContent, { borderColor: colors.line }]}>
+            <View style={styles.summaryMetrics}>
+              <MetricTile label="Avg Score" value={todaySummary.avgScore !== null ? String(todaySummary.avgScore) : "--"} />
+              <MetricTile label="Avg Confidence" value={todaySummary.avgConfidence !== null ? formatPercent(todaySummary.avgConfidence) : "--"} />
+              <MetricTile label="Trips Analyzed" value={String(todaySummary.tripCount)} />
+            </View>
+          </View>
+        </Animated.View>
+      </Card>
+
       <View style={[styles.hero, isWide ? styles.heroWide : null, { backgroundColor: colors.darkSurfaceDeep }]}>
         <FloatingOrb style={styles.heroOrbPrimary} duration={8600} xRange={[-10, 12]} yRange={[-10, 16]} />
         <FloatingOrb style={styles.heroOrbSecondary} duration={11200} xRange={[-12, 8]} yRange={[-6, 12]} />
@@ -288,6 +360,44 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
 const styles = StyleSheet.create({
   root: {
     gap: spacing.lg
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  summaryHeaderLeft: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  summaryTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexWrap: "wrap",
+  },
+  summaryTitle: {
+    fontSize: type.section,
+    fontWeight: "800",
+    fontFamily: fontFamily.heading,
+  },
+  summaryChevron: {
+    fontSize: type.caption,
+    fontWeight: "800",
+    fontFamily: fontFamily.heading,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  summaryContent: {
+    borderTopWidth: 1,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  summaryMetrics: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
   },
   hero: {
     borderRadius: radius.xl,
