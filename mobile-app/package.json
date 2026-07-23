@@ -1,0 +1,44 @@
+{
+  "name": "safe-driving-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start --lan",
+    "start:tunnel": "expo start --tunnel",
+    "start:clear": "expo start --clear --lan",
+    "start:tunnel:clear": "expo start --clear --tunnel",
+    "start:localhost:clear": "expo start --localhost --clear",
+    "usb:reverse": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-usb-reverse.ps1",
+    "start:usb": "npm run usb:reverse && npm run start:localhost:clear",
+    "emulator:start": "powershell -ExecutionPolicy Bypass -File ./scripts/start-android-emulator.ps1",
+    "android:emulator": "npm run emulator:start && expo start --android",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:android:apk": "eas build --platform android --profile preview",
+    "build:android:aab": "eas build --platform android --profile production",
+    "build:ios": "eas build --platform ios --profile production"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~54.0.33",
+    "expo-location": "~19.0.8",
+    "expo-sensors": "~15.0.8",
+    "expo-status-bar": "~3.0.9",
+    "leaflet": "^1.9.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-leaflet": "^5.0.0",
+    "react-native": "0.81.5",
+    "react-native-maps": "1.20.1",
+    "react-native-web": "^0.21.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/leaflet": "^1.9.21",
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  }
+}
