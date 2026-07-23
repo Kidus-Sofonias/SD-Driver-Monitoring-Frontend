@@ -503,7 +503,10 @@ export class PhoneSensorCollector {
       return drained;
     }
 
-    if (this.mode === "demo" && fallbackToDemo) {
+    // Also fall back to demo when mode is "idle" — this handles the case where
+    // the collector was stopped after a previous trip but we still want to
+    // generate demo samples on web for the current active trip.
+    if ((this.mode === "demo" || this.mode === "idle") && fallbackToDemo) {
       if (!this.demoScenario || this.demoScenario.progress >= 0.995) {
         this.demoScenario = createDemoScenario();
       }

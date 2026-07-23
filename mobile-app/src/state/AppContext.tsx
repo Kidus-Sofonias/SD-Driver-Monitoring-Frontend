@@ -591,7 +591,9 @@ export function AppProvider({ children }: PropsWithChildren) {
 
     autoUploadInFlightRef.current = true;
     const preDrainSnapshot = collectorRef.current.snapshot();
-    const allowDemoFallback = preDrainSnapshot.mode === "demo";
+    // On web, the collector may be in "idle" mode after a stop(). Treat idle the same
+    // as demo for fallback so we always have samples to upload during browser demos.
+    const allowDemoFallback = preDrainSnapshot.mode === "demo" || preDrainSnapshot.mode === "idle";
     const samples = collectorRef.current.drainSamples({ fallbackToDemo: allowDemoFallback });
     const drainedSnapshot = collectorRef.current.snapshot();
 
@@ -605,7 +607,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       autoUploadInFlightRef.current = false;
       if (!options?.suppressEmptyError) {
         throw new Error(
-          preDrainSnapshot.mode === "demo"
+          preDrainSnapshot.mode === "demo" || preDrainSnapshot.mode === "idle"
             ? "No demo samples available yet. Try syncing again."
             : "Waiting for the first live sensor samples."
         );
@@ -657,7 +659,9 @@ export function AppProvider({ children }: PropsWithChildren) {
       // If no live sensor data has arrived yet (live with no data, or idle from browser),
       // inject a demo batch so the user gets immediate feedback instead of the
       // "Waiting for the first live sensor samples" error.
-      if (snapshot.bufferedCount < 1 && snapshot.lastSampleAt === null) {
+      // Check mode in addition to lastSampleAt because drainSamples can set lastSampleAt
+      // before a stop() call transitions mode to "idle", causing the guard to fail.
+      if (snapshot.bufferedCount < 1 && (snapshot.lastSampleAt === null || snapshot.mode !== "live")) {
         const demoSamples = generateMockSensorBurst();
         const uploadResult = await api.uploadSamples(
           state.apiBaseUrl,
