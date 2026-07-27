@@ -33,7 +33,7 @@ export function AnimatedScoreRing({ score, size = 160 }: Props) {
       toValue: 1,
       friction: 6,
       tension: 100,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [scaleAnim]);
 

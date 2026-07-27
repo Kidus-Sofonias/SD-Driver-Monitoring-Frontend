@@ -36,7 +36,7 @@ export function StatusPill({ label, tone = "neutral" }: Props) {
       toValue: 1,
       friction: 5,
       tension: 140,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [label, tone, scaleAnim]);
 

@@ -12,6 +12,7 @@ import { formatConfidence, formatDateTime, formatPercent, titleCase } from "../l
 import { useApp } from "../state/AppContext";
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
+import { groupEventsByType } from "../lib/format";
 
 export function ResultsScreen() {
   const colors = useThemeColors();
@@ -87,13 +88,18 @@ export function ResultsScreen() {
       <Card delay={260}>
         <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
         {events.length ? (
-          events.slice(0, 5).map((event) => (
-            <View key={`${event.id}-${event.event_type}`} style={[styles.eventRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
+          groupEventsByType(events).map((group) => (
+            <View key={group.key} style={[styles.eventRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
               <View style={styles.eventText}>
-                <Text style={[styles.eventTitle, { color: colors.heading }]}>{translateDynamic(titleCase(event.event_type))}</Text>
-                <Text style={[styles.eventMeta, { color: colors.muted }]}>{formatDateTime(event.created_at)}</Text>
+                <Text style={[styles.eventTitle, { color: colors.heading }]}>
+                  {translateDynamic(titleCase(group.event_type))}
+                  <Text style={[styles.eventMeta, { color: colors.muted }]}> ×{group.count}</Text>
+                </Text>
+                <Text style={[styles.eventMeta, { color: colors.muted }]}>
+                  Avg {Math.round(group.avg_value)} | Max {Math.round(group.max_value)}
+                </Text>
               </View>
-              <StatusPill label={`${Math.round(event.value)}`} tone={event.value > 7 ? "bad" : event.value > 4 ? "warn" : "good"} />
+              <StatusPill label={`×${group.count}`} tone={group.avg_value > 7 ? "bad" : group.avg_value > 4 ? "warn" : "good"} />
             </View>
           ))
         ) : (

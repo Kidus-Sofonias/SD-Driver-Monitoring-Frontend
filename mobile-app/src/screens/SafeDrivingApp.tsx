@@ -13,7 +13,7 @@ import { ReviewScreen } from "./ReviewScreen";
 import { SettingsScreen } from "./SettingsScreen";
 import { TripsScreen } from "./TripsScreen";
 import { Card } from "../components/Card";
-import { FloatingOrb, Reveal } from "../components/Motion";
+import { Reveal } from "../components/Motion";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useI18n } from "../i18n";
 import { displayNameFromEmail } from "../lib/format";
@@ -61,6 +61,7 @@ export function SafeDrivingApp() {
   const tabs: Array<{ key: TabKey; label: string }> = isAdmin
     ? [
         { key: "dashboard", label: t("home") },
+        { key: "trips", label: t("trip_history") },
         { key: "drivers", label: t("drivers") },
         { key: "review", label: t("review_dashboard") },
         { key: "settings", label: t("settings") }
@@ -74,7 +75,7 @@ export function SafeDrivingApp() {
       ];
 
   useEffect(() => {
-    if (isAdmin && tab !== "dashboard" && tab !== "review" && tab !== "settings" && tab !== "tripDetail" && tab !== "drivers" && tab !== "driverDetail") {
+    if (isAdmin && tab !== "dashboard" && tab !== "review" && tab !== "settings" && tab !== "tripDetail" && tab !== "drivers" && tab !== "driverDetail" && tab !== "trips") {
       setTab("dashboard");
     }
   }, [isAdmin, tab]);
@@ -108,7 +109,7 @@ export function SafeDrivingApp() {
     Animated.timing(drawerTranslate, {
       toValue: menuOpen ? 0 : -320,
       duration: 220,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [drawerTranslate, menuOpen]);
 
@@ -164,20 +165,42 @@ export function SafeDrivingApp() {
   }
 
   async function handleOpenTripDetail(tripId: string) {
+    // Clear stale data so the detail screen shows loading state instead of old data
+    clearSelectedTripDetail();
+    clearSelectedReview();
+    // Navigate immediately for instant feedback, then load data in background
+    setAdminReturnTab(tab === "driverDetail" ? "driverDetail" : tab === "review" ? "review" : "trips");
+    setTab("tripDetail");
+    setMenuOpen(false);
+
     if (isAdmin) {
-      await loadReview(tripId);
-      setAdminReturnTab(tab === "driverDetail" ? "driverDetail" : "review");
+      if (tab === "driverDetail") {
+        await loadTripDetail(tripId);
+      } else {
+        await loadReview(tripId);
+      }
     } else {
       await loadTripDetail(tripId);
     }
+  }
+
+  async function handleAdminOpenTripDetail(tripId: string) {
+    // For admin viewing a review - load with review data
+    clearSelectedTripDetail();
+    clearSelectedReview();
+    setAdminReturnTab("review");
     setTab("tripDetail");
     setMenuOpen(false);
+    await loadReview(tripId);
   }
 
   async function handleOpenAdminDriver(driver: AdminDriver) {
-    await loadAdminDriver(driver);
+    // Navigate immediately for instant feedback
     setTab("driverDetail");
     setMenuOpen(false);
+    // Don't clear selectedAdminDriver here — a useEffect auto-navigates away when it's null.
+    // Keep old driver visible while loading new data (loadAdminDriver overwrites it).
+    await loadAdminDriver(driver);
   }
 
   function navigate(nextTab: TabKey) {
@@ -214,7 +237,7 @@ export function SafeDrivingApp() {
   } else if (tab === "tripDetail") {
     content = <TripDetailScreen onBack={() => setTab(isAdmin ? adminReturnTab : "trips")} />;
   } else if (tab === "review") {
-    content = <ReviewScreen />;
+    content = <ReviewScreen onOpenTripDetail={handleAdminOpenTripDetail} />;
   } else if (tab === "drivers") {
     content = <AdminDriversScreen onOpenDriver={handleOpenAdminDriver} />;
   } else if (tab === "driverDetail") {
@@ -236,20 +259,6 @@ export function SafeDrivingApp() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.canvas }]}>
-      <FloatingOrb
-        style={[styles.backgroundOrb, styles.backgroundOrbPrimary, { backgroundColor: colors.sky }]}
-        duration={9200}
-        xRange={[-10, 12]}
-        yRange={[-14, 10]}
-        scaleRange={[0.95, 1.08]}
-      />
-      <FloatingOrb
-        style={[styles.backgroundOrb, styles.backgroundOrbSecondary, { backgroundColor: colors.aqua }]}
-        duration={11000}
-        xRange={[-12, 8]}
-        yRange={[-8, 14]}
-        scaleRange={[0.94, 1.06]}
-      />
       {menuOpen ? <Pressable style={styles.drawerScrim} onPress={() => setMenuOpen(false)} /> : null}
 
       {session ? (
@@ -377,23 +386,7 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  backgroundOrb: {
-    position: "absolute",
-    borderRadius: 999,
-    opacity: 0.6,
-  },
-  backgroundOrbPrimary: {
-    width: 260,
-    height: 260,
-    top: -60,
-    right: -40,
-  },
-  backgroundOrbSecondary: {
-    width: 220,
-    height: 220,
-    bottom: 140,
-    left: -60,
-  },
+
   pageScroll: {
     flex: 1,
   },

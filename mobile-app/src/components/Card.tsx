@@ -21,21 +21,21 @@ export function Card({ children, style, delay = 0 }: Props) {
         toValue: 1,
         duration: 360,
         delay,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.spring(translateY, {
         toValue: 0,
         delay,
         friction: 9,
         tension: 70,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.spring(scale, {
         toValue: 1,
         delay,
         friction: 8,
         tension: 74,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, [delay, opacity, scale, translateY]);

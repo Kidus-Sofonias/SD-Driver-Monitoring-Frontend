@@ -5,7 +5,9 @@ import { AnimatedScoreRing } from "../components/AnimatedScoreRing";
 import { Card } from "../components/Card";
 import { MetricTile } from "../components/MetricTile";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { SkeletonCard } from "../components/SkeletonShimmer";
 import { StatusPill } from "../components/StatusPill";
+import { TextField } from "../components/TextField";
 import { useI18n } from "../i18n";
 import { formatConfidence, formatDateTime, formatPercent, titleCase } from "../lib/format";
 import { cleanRoutePoints, haversineKm } from "../lib/route";
@@ -13,6 +15,7 @@ import { useApp } from "../state/AppContext";
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
 import { RoutePreview } from "./TripRoutePreview";
+import { groupEventsByType } from "../lib/format";
 import type { TripRoutePoint } from "../types/api";
 
 type Props = {
@@ -23,13 +26,25 @@ export function TripDetailScreen({ onBack }: Props) {
   const colors = useThemeColors();
   const { t, translateDynamic } = useI18n();
   const { width } = useWindowDimensions();
-  const { selectedReview, selectedTripDetail, selectedTripRoute } = useApp();
+  const { busy, selectedReview, selectedTripDetail, selectedTripRoute, submitReview } = useApp();
   const [mapOpen, setMapOpen] = useState(false);
+  const [eventsExpanded, setEventsExpanded] = useState(true);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const isWide = width >= 980;
   const detail = selectedReview ?? selectedTripDetail;
   const cleanedRoutePoints = selectedTripRoute ? cleanRoutePoints(selectedTripRoute.points) : [];
 
   if (!detail) {
+    if (busy) {
+      return (
+        <View style={styles.root}>
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={2} />
+        </View>
+      );
+    }
     return (
       <Card>
         <Text style={[styles.sectionTitle, { color: colors.heading }]}>{t("trip_details")}</Text>
@@ -94,20 +109,35 @@ export function TripDetailScreen({ onBack }: Props) {
       </Card>
 
       <Card>
-        <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
-        {detail.events.length ? (
-          detail.events.map((event) => (
-            <View key={`${event.id}-${event.event_type}`} style={[styles.eventRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
-              <View style={styles.eventText}>
-                <Text style={[styles.eventTitle, { color: colors.heading }]}>{translateDynamic(titleCase(event.event_type))}</Text>
-                <Text style={[styles.meta, { color: colors.muted }]}>{formatDateTime(event.created_at)}</Text>
+        <Pressable onPress={() => setEventsExpanded((prev) => !prev)} style={styles.summaryHeader}>
+          <View style={styles.summaryHeaderLeft}>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
+            <Text style={[styles.summaryTitle, { color: colors.heading }]}>
+              {detail.events.length} event{detail.events.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          <Text style={[styles.summaryChevron, { color: colors.muted }]}>{eventsExpanded ? "▲" : "▼"}</Text>
+        </Pressable>
+        {eventsExpanded && detail.events.length ? (
+          <View style={styles.eventsList}>
+            {groupEventsByType(detail.events).map((group) => (
+              <View key={group.key} style={[styles.eventRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
+                <View style={styles.eventText}>
+                  <Text style={[styles.eventTitle, { color: colors.heading }]}>
+                    {translateDynamic(titleCase(group.event_type))}
+                    <Text style={[styles.eventCount, { color: colors.muted }]}> ×{group.count}</Text>
+                  </Text>
+                  <Text style={[styles.meta, { color: colors.muted }]}>
+                    Avg {Math.round(group.avg_value)} | Max {Math.round(group.max_value)}
+                  </Text>
+                </View>
+                <StatusPill label={`×${group.count}`} tone={group.avg_value > 7 ? "bad" : group.avg_value > 4 ? "warn" : "good"} />
               </View>
-              <StatusPill label={`${Math.round(event.value)}`} tone={event.value > 7 ? "bad" : event.value > 4 ? "warn" : "good"} />
-            </View>
-          ))
-        ) : (
+            ))}
+          </View>
+        ) : eventsExpanded && !detail.events.length ? (
           <Text style={[styles.meta, { color: colors.muted }]}>{t("no_events_for_trip")}</Text>
-        )}
+        ) : null}
       </Card>
 
       {selectedTripRoute?.points.length ? (
@@ -145,6 +175,54 @@ export function TripDetailScreen({ onBack }: Props) {
             <MetricTile label={t("predicted_label")} value={"predicted_label" in detail ? detail.predicted_label?.toString() || "--" : "--"} />
             <MetricTile label={t("events_label")} value={detail.events.length.toString()} />
           </View>
+
+          {/* Review controls — only show when selectedReview is active (from review context) */}
+          {selectedReview && !reviewSubmitted ? (
+            <View style={styles.reviewSection}>
+              <TextField
+                label={t("review_notes")}
+                value={reviewNotes}
+                onChangeText={setReviewNotes}
+                placeholder={t("review_notes_placeholder")}
+                multiline
+                autoCapitalize="sentences"
+              />
+              <View style={styles.reviewActions}>
+                <View style={styles.reviewActionButton}>
+                  <PrimaryButton
+                    label={t("mark_safe")}
+                    onPress={async () => {
+                      await submitReview(0, reviewNotes);
+                      setReviewSubmitted(true);
+                    }}
+                    loading={busy}
+                    variant="secondary"
+                  />
+                </View>
+                <View style={styles.reviewActionButton}>
+                  <PrimaryButton
+                    label={t("mark_risky")}
+                    onPress={async () => {
+                      await submitReview(1, reviewNotes);
+                      setReviewSubmitted(true);
+                    }}
+                    loading={busy}
+                  />
+                </View>
+              </View>
+              <PrimaryButton
+                label={t("clear_label")}
+                onPress={async () => {
+                  await submitReview(null, reviewNotes);
+                  setReviewSubmitted(true);
+                }}
+                loading={busy}
+                variant="danger"
+              />
+            </View>
+          ) : selectedReview && reviewSubmitted ? (
+            <StatusPill label="Review submitted" tone="good" />
+          ) : null}
         </Card>
       ) : null}
 
@@ -264,6 +342,32 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     lineHeight: 21,
   },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  summaryHeaderLeft: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  summaryTitle: {
+    fontSize: type.body,
+    fontWeight: "800",
+    fontFamily: fontFamily.heading,
+  },
+  summaryChevron: {
+    fontSize: type.caption,
+    fontWeight: "800",
+    fontFamily: fontFamily.heading,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  eventsList: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
   eventRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -281,6 +385,11 @@ const styles = StyleSheet.create({
     fontSize: type.body,
     fontWeight: "700",
     fontFamily: fontFamily.heading,
+  },
+  eventCount: {
+    fontSize: type.body,
+    fontWeight: "400",
+    fontFamily: fontFamily.body,
   },
   routeSection: {
     gap: spacing.md,
@@ -340,5 +449,20 @@ const styles = StyleSheet.create({
     fontSize: type.body,
     fontWeight: "700",
     fontFamily: fontFamily.heading,
+  },
+  reviewSection: {
+    marginTop: spacing.md,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+  },
+  reviewActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    flexWrap: "wrap",
+  },
+  reviewActionButton: {
+    flex: 1,
+    minWidth: 140,
   },
 });

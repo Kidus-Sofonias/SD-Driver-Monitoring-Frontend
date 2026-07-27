@@ -1,29 +1,24 @@
-import React, { useState } from "react";
+import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
-import { TextField } from "../components/TextField";
 import { useI18n } from "../i18n";
 import { formatConfidence, formatDateTime, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
-import { spacing, type } from "../theme/tokens";
+import { fontFamily, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
 
-export function ReviewScreen() {
+type Props = {
+  onOpenTripDetail: (tripId: string) => Promise<void>;
+};
+
+export function ReviewScreen({ onOpenTripDetail }: Props) {
   const colors = useThemeColors();
   const { t, translateDynamic } = useI18n();
-  const { busy, loadReview, reviewItems, selectedReview, submitReview } = useApp();
+  const { reviewItems } = useApp();
   const safeReviewItems = Array.isArray(reviewItems) ? reviewItems : [];
-  const selectedReasons = Array.isArray(selectedReview?.reasons) ? selectedReview.reasons : [];
-  const selectedEvents = Array.isArray(selectedReview?.events) ? selectedReview.events : [];
-  const [notes, setNotes] = useState("");
-
-  async function loadTrip(tripId: string) {
-    await loadReview(tripId);
-    setNotes("");
-  }
 
   return (
     <View style={styles.root}>
@@ -45,22 +40,29 @@ export function ReviewScreen() {
         </Card>
       ) : (
         safeReviewItems.map((item) => (
-          <Pressable key={item.trip_id} onPress={() => loadTrip(item.trip_id)}>
+          <Pressable key={item.trip_id} onPress={() => void onOpenTripDetail(item.trip_id)}>
             <Card>
               <View style={styles.row}>
                 <View style={styles.textBlock}>
-                  <Text style={[styles.tripId, { color: colors.heading }]}>{item.trip_id.slice(0, 8)}...</Text>
+                  <Text style={[styles.tripId, { color: colors.heading }]}>
+                    {`TR-${item.trip_id.slice(0, 4).toUpperCase()}`}
+                  </Text>
                   <Text style={[styles.meta, { color: colors.text }]}>{item.driver_email || formatDateTime(item.processed_at)}</Text>
                   <Text style={[styles.meta, { color: colors.muted }]}>{formatDateTime(item.processed_at)}</Text>
                 </View>
-                <StatusPill
-                  label={translateDynamic(titleCase(item.risk_level || "unknown"))}
-                  tone={item.risk_level === "low" ? "good" : item.risk_level === "medium" ? "warn" : "bad"}
-                />
+                <View style={styles.pillStack}>
+                  <StatusPill
+                    label={translateDynamic(titleCase(item.risk_level || "unknown"))}
+                    tone={item.risk_level === "low" ? "good" : item.risk_level === "medium" ? "warn" : "bad"}
+                  />
+                </View>
               </View>
-              <Text style={[styles.meta, { color: colors.text }]}>
-                {`${t("today_score")} ${item.score ?? "--"} | ${t("confidence")} ${formatConfidence(item.confidence)}`}
-              </Text>
+              <View style={styles.metaRow}>
+                <Text style={[styles.meta, { color: colors.text }]}>
+                  {`${t("today_score")} ${item.score ?? "--"} | ${t("confidence")} ${formatConfidence(item.confidence)}`}
+                </Text>
+                <PrimaryButton label={t("open_trip_results")} onPress={() => void onOpenTripDetail(item.trip_id)} variant="secondary" />
+              </View>
               <Text style={[styles.reasonLine, { color: colors.text }]}>
                 {(Array.isArray(item.reasons) ? item.reasons : []).map((reason) => translateDynamic(reason)).join(" | ") ||
                   translateDynamic("No reasons generated.")}
@@ -69,36 +71,6 @@ export function ReviewScreen() {
           </Pressable>
         ))
       )}
-
-      {selectedReview ? (
-        <Card>
-          <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("selected_trip")}</Text>
-          <Text style={[styles.sectionTitle, { color: colors.heading }]}>{t("trip_review_detail")}</Text>
-          <Text style={[styles.meta, { color: colors.text }]}>{`${t("trip_id")}: ${selectedReview.trip_id}`}</Text>
-          {selectedReview.driver_email ? <Text style={[styles.meta, { color: colors.text }]}>{selectedReview.driver_email}</Text> : null}
-          <Text style={[styles.meta, { color: colors.text }]}>{`${t("predicted_label")}: ${selectedReview.predicted_label ?? "--"}`}</Text>
-          <Text style={[styles.meta, { color: colors.text }]}>{`${t("rule_score")}: ${selectedReview.rule_score ?? "--"}`}</Text>
-          <Text style={[styles.reasonLine, { color: colors.text }]}>
-            {selectedReasons.map((reason) => translateDynamic(reason)).join(" | ") || translateDynamic("No reasons generated.")}
-          </Text>
-          <Text style={[styles.meta, { color: colors.text }]}>
-            {`${t("events_label")}: ${selectedEvents.map((event) => translateDynamic(titleCase(event.event_type))).join(", ") || t("no_events")}`}
-          </Text>
-          <TextField
-            label={t("review_notes")}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder={t("review_notes_placeholder")}
-            multiline
-            autoCapitalize="sentences"
-          />
-          <View style={styles.actionRow}>
-            <PrimaryButton label={t("mark_safe")} onPress={() => submitReview(0, notes)} loading={busy} variant="secondary" />
-            <PrimaryButton label={t("mark_risky")} onPress={() => submitReview(1, notes)} loading={busy} />
-          </View>
-          <PrimaryButton label={t("clear_label")} onPress={() => submitReview(null, notes)} loading={busy} variant="danger" />
-        </Card>
-      ) : null}
     </View>
   );
 }
@@ -137,9 +109,19 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs
   },
+  pillStack: {
+    flexShrink: 0,
+  },
   tripId: {
     fontSize: type.body,
     fontWeight: "700"
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexWrap: "wrap",
   },
   meta: {
     fontSize: type.body,
@@ -149,8 +131,4 @@ const styles = StyleSheet.create({
     fontSize: type.body,
     lineHeight: 21
   },
-  actionRow: {
-    flexDirection: "row",
-    gap: spacing.sm
-  }
 });

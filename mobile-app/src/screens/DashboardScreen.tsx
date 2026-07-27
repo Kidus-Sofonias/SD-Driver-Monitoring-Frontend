@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
-import { FloatingOrb, Reveal } from "../components/Motion";
+import { Reveal } from "../components/Motion";
 import { AnimatedScoreRing } from "../components/AnimatedScoreRing";
 import { MetricTile } from "../components/MetricTile";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -12,6 +12,7 @@ import { dateValueOf, formatDayDateTime, formatDurationSince, formatPercent, for
 import { useApp } from "../state/AppContext";
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
+import { groupEventsByType } from "../lib/format";
 
 type Props = {
   onOpenDrive: () => void;
@@ -94,6 +95,7 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
     return { avgScore, avgConfidence, tripCount: tripPool.length, trend };
   }, [scoredTrips]);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [eventsExpanded, setEventsExpanded] = useState(true);
   const summaryAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -140,8 +142,6 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
       </Card>
 
       <View style={[styles.hero, isWide ? styles.heroWide : null, { backgroundColor: colors.darkSurfaceDeep }]}>
-        <FloatingOrb style={styles.heroOrbPrimary} duration={8600} xRange={[-10, 12]} yRange={[-10, 16]} />
-        <FloatingOrb style={styles.heroOrbSecondary} duration={11200} xRange={[-12, 8]} yRange={[-6, 12]} />
         <View style={[styles.heroCopy, isWide ? styles.heroCopyWide : null]}>
           <Reveal delay={30}>
             <View style={styles.heroBadge}>
@@ -329,28 +329,36 @@ export function DashboardScreen({ onOpenDrive, onOpenResults, onOpenTrip, onStar
         </Card>
 
         <Card style={isWide ? styles.flexCard : null} delay={320}>
-          <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
-          <Text style={[styles.cardTitle, { color: colors.heading }]}>{t("latest_event_summary")}</Text>
-          <View style={styles.listStack}>
-            {generatedEvents.length ? (
-              generatedEvents.slice(0, 4).map((event) => {
-                const severity = event.value > 7 ? "High" : event.value > 4 ? "Medium" : "Low";
-                return (
-                  <View key={`${event.id}-${event.event_type}`} style={[styles.eventRow, isCompact ? styles.eventRowCompact : null, { borderColor: colors.line, backgroundColor: colors.panelRaised }]}>
+          <Pressable onPress={() => setEventsExpanded((prev) => !prev)} style={styles.dashEventsHeader}>
+            <View style={styles.dashEventsHeaderLeft}>
+              <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("generated_events")}</Text>
+              <Text style={[styles.cardTitle, { color: colors.heading }]}>{t("latest_event_summary")}</Text>
+            </View>
+            <Text style={[styles.summaryChevron, { color: colors.muted }]}>{eventsExpanded ? "▲" : "▼"}</Text>
+          </Pressable>
+          {eventsExpanded ? (
+            <View style={styles.listStack}>
+              {generatedEvents.length ? (
+                groupEventsByType(generatedEvents).slice(0, 5).map((group) => (
+                  <View key={group.key} style={[styles.eventRow, isCompact ? styles.eventRowCompact : null, { borderColor: colors.line, backgroundColor: colors.panelRaised }]}>
                     <View style={styles.historyText}>
-                      <Text style={[styles.historyTitle, { color: colors.heading }]}>{translateDynamic(titleCase(event.event_type))}</Text>
-                      <Text style={[styles.historyMeta, { color: colors.muted }]}>{formatDayDateTime(event.created_at)}</Text>
+                      <Text style={[styles.historyTitle, { color: colors.heading }]}>
+                        {translateDynamic(titleCase(group.event_type))}
+                      </Text>
+                      <Text style={[styles.historyMeta, { color: colors.muted }]}>
+                        ×{group.count} | Avg {Math.round(group.avg_value)}
+                      </Text>
                     </View>
-                    <StatusPill label={translateDynamic(severity)} tone={severity === "High" ? "bad" : severity === "Medium" ? "warn" : "good"} />
+                    <StatusPill label={`×${group.count}`} tone={group.avg_value > 7 ? "bad" : group.avg_value > 4 ? "warn" : "good"} />
                   </View>
-                );
-              })
-            ) : (
-              <View style={[styles.emptyCard, { borderColor: colors.line, backgroundColor: colors.panelRaised }]}>
-                <Text style={[styles.historyMeta, { color: colors.muted }]}>{t("generated_events_empty")}</Text>
-              </View>
-            )}
-          </View>
+                ))
+              ) : (
+                <View style={[styles.emptyCard, { borderColor: colors.line, backgroundColor: colors.panelRaised }]}>
+                  <Text style={[styles.historyMeta, { color: colors.muted }]}>{t("generated_events_empty")}</Text>
+                </View>
+              )}
+            </View>
+          ) : null}
         </Card>
       </View>
     </View>
@@ -388,6 +396,16 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.heading,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  dashEventsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: spacing.md,
+  },
+  dashEventsHeaderLeft: {
+    flex: 1,
+    gap: spacing.xs,
   },
   summaryContent: {
     borderTopWidth: 1,
@@ -494,24 +512,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     marginTop: spacing.xs
   },
-  heroOrbPrimary: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    top: -56,
-    right: -42,
-    backgroundColor: "rgba(125, 211, 252, 0.16)",
-  },
-  heroOrbSecondary: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    borderRadius: 999,
-    bottom: -38,
-    left: -28,
-    backgroundColor: "rgba(199,243,107,0.08)",
-  },
+
   row: {
     gap: spacing.lg
   },

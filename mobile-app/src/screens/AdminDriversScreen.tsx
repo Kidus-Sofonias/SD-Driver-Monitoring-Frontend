@@ -127,48 +127,48 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
             visibleDrivers.map((driver) => {
               const pressure = driverPressure.get(driver.id);
               return (
-                <View key={driver.id} style={[styles.driverRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
-                  <View style={styles.driverMeta}>
-                    <Pressable onPress={() => void onOpenDriver(driver)} style={({ pressed }) => [pressed ? styles.pressed : null]}>
+                <Pressable key={driver.id} onPress={() => void onOpenDriver(driver)} style={({ pressed }) => [pressed ? styles.pressed : null]}>
+                  <View style={[styles.driverRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
+                    <View style={styles.driverMeta}>
                       <Text style={[styles.driverEmail, { color: colors.heading }]}>{driver.email}</Text>
-                    </Pressable>
-                    <Text style={[styles.driverSubtle, { color: colors.muted }]}>
-                      {t("trips_recorded", { count: driver.trip_count })}
-                    </Text>
-                    <Text style={[styles.driverSubtle, { color: colors.muted }]}>
-                      {t("last_trip", { time: formatDateTime(driver.latest_trip_at) })}
-                    </Text>
-                    <Text style={[styles.driverSubtle, { color: colors.text }]}>
-                      {t("pending_reviews_high_risk", {
-                        pending: pressure?.pendingReviews ?? 0,
-                        highRisk: pressure?.highRiskTrips ?? 0,
-                      })}
-                    </Text>
-                  </View>
-                  <View style={styles.rowActions}>
-                    <Text style={[styles.scoreLabel, { color: colors.heading }]}>
-                      {pressure?.scoreCount ? `${Math.round(pressure.averageScore)}` : "--"}
-                    </Text>
-                    <View style={styles.iconRow}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit ${driver.email}`}
-                        onPress={() => openEdit(driver)}
-                        style={[styles.iconButton, { borderColor: colors.accentStrong, backgroundColor: colors.accent }]}
-                      >
-                        <Text style={[styles.iconLabel, { color: colors.accentStrong }]}>Edit</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Delete ${driver.email}`}
-                        onPress={() => setDeletingDriver(driver)}
-                        style={[styles.iconButton, { borderColor: "#D3505D", backgroundColor: "rgba(211,80,93,0.14)" }]}
-                      >
-                        <Text style={[styles.iconLabel, { color: "#C23A48" }]}>Del</Text>
-                      </Pressable>
+                      <Text style={[styles.driverSubtle, { color: colors.muted }]}>
+                        {t("trips_recorded", { count: driver.trip_count })}
+                      </Text>
+                      <Text style={[styles.driverSubtle, { color: colors.muted }]}>
+                        {t("last_trip", { time: formatDateTime(driver.latest_trip_at) })}
+                      </Text>
+                      <Text style={[styles.driverSubtle, { color: colors.text }]}>
+                        {t("pending_reviews_high_risk", {
+                          pending: pressure?.pendingReviews ?? 0,
+                          highRisk: pressure?.highRiskTrips ?? 0,
+                        })}
+                      </Text>
+                    </View>
+                    <View style={styles.rowActions}>
+                      <Text style={[styles.scoreLabel, { color: colors.heading }]}>
+                        {pressure?.scoreCount ? `${Math.round(pressure.averageScore)}` : "--"}
+                      </Text>
+                      <View style={styles.iconRow}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Edit ${driver.email}`}
+                          onPress={(e) => { e.stopPropagation(); openEdit(driver); }}
+                          style={[styles.iconButton, { borderColor: colors.accentStrong, backgroundColor: colors.accent }]}
+                        >
+                          <Text style={[styles.iconLabel, { color: colors.accentStrong }]}>Edit</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete ${driver.email}`}
+                          onPress={(e) => { e.stopPropagation(); setDeletingDriver(driver); }}
+                          style={[styles.iconButton, { borderColor: "#D3505D", backgroundColor: "rgba(211,80,93,0.14)" }]}
+                        >
+                          <Text style={[styles.iconLabel, { color: "#C23A48" }]}>Del</Text>
+                        </Pressable>
+                      </View>
                     </View>
                   </View>
-                </View>
+                </Pressable>
               );
             })
           ) : (

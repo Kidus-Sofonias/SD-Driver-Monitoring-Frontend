@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text } from "react-native";
 
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -35,13 +35,13 @@ export function PrimaryButton({ label, onPress, loading, variant = "primary", di
         toValue: pressed ? 0.97 : 1,
         friction: 8,
         tension: 190,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.spring(translateY, {
         toValue: pressed ? 1.5 : 0,
         friction: 8,
         tension: 190,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }
@@ -100,20 +100,31 @@ const styles = StyleSheet.create({
 });
 
 function dynamicStyles(colors: ReturnType<typeof useThemeColors>) {
+  const isDark = colors.canvas === "#04101B";
   return StyleSheet.create({
-    primaryGlow: {
-      shadowColor: colors.lime,
-      shadowOpacity: 0.24,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 5,
-    },
-    secondaryGlow: {
-      shadowColor: colors.canvas === "#04101B" ? "#000000" : colors.accentStrong,
-      shadowOpacity: colors.canvas === "#04101B" ? 0.16 : 0.1,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 3,
-    },
+    primaryGlow: Platform.OS === "web"
+      ? {
+          boxShadow: `0 10px 20px ${isDark ? "rgba(199,243,107,0.20)" : "rgba(199,243,107,0.28)"}`,
+          elevation: 5,
+        }
+      : {
+          shadowColor: colors.lime,
+          shadowOpacity: isDark ? 0.2 : 0.28,
+          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 10 },
+          elevation: 5,
+        },
+    secondaryGlow: Platform.OS === "web"
+      ? {
+          boxShadow: `0 8px 18px ${isDark ? "rgba(0,0,0,0.16)" : "rgba(0,0,0,0.10)"}`,
+          elevation: 3,
+        }
+      : {
+          shadowColor: isDark ? "#000000" : colors.accentStrong,
+          shadowOpacity: isDark ? 0.16 : 0.1,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 3,
+        },
   });
 }

@@ -62,7 +62,7 @@ export function DriveScreen({ onOpenResults }: Props) {
       toValue,
       friction: 8,
       tension: 80,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
     setGlanceMode((prev) => !prev);
   }

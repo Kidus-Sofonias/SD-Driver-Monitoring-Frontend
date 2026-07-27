@@ -24,38 +24,30 @@ export function Reveal({
   duration = 520,
   style,
 }: RevealProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(distance)).current;
-  const scale = useRef(new Animated.Value(0.94)).current;
+  const entry = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration,
-        delay,
-        easing: Easing.out(Easing.poly(4)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration,
-        delay,
-        easing: Easing.out(Easing.poly(4)),
-        useNativeDriver: true,
-      }),
-      Animated.spring(scale, {
-        toValue: 1,
-        delay,
-        friction: 7,
-        tension: 74,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay, distance, duration, opacity, scale, translateY]);
+    entry.setValue(0);
+    Animated.timing(entry, {
+      toValue: 1,
+      duration,
+      delay,
+      easing: Easing.out(Easing.poly(4)),
+      useNativeDriver: false,
+    }).start();
+  }, [delay, distance, duration, entry]);
+
+  const opacity = entry.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+  const translateY = entry.interpolate({
+    inputRange: [0, 1],
+    outputRange: [distance, 0],
+  });
 
   return (
-    <Animated.View style={[style, { opacity, transform: [{ translateY }, { scale }] }]}>
+    <Animated.View style={[style, { opacity, transform: [{ translateY }] }]}>
       {children}
     </Animated.View>
   );
@@ -78,13 +70,13 @@ export function FloatingOrb({
           toValue: 1,
           duration,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(progress, {
           toValue: 0,
           duration,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     );

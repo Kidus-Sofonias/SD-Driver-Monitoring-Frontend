@@ -295,6 +295,16 @@ export async function submitReviewLabel(
   });
 }
 
+export async function listAllTrips(baseUrl: string, token: string) {
+  return request<Trip[]>("/admin/trips", { token, baseUrl });
+}
+
+
+export async function getAdminTripRoute(baseUrl: string, token: string, tripId: string) {
+  return request<TripRoute>(`/admin/trips/${tripId}/route`, { token, baseUrl });
+}
+
+
 export async function getAdminDrivers(baseUrl: string, token: string) {
   return request<AdminDriver[]>("/admin/drivers", { token, baseUrl });
 }

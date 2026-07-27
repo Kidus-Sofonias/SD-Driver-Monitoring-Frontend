@@ -112,3 +112,39 @@ export function displayNameFromEmail(email?: string | null) {
 export function dateValueOf(value?: string | null) {
   return parseApiDate(value)?.getTime() ?? 0;
 }
+
+export type EventGroup = {
+  event_type: string;
+  count: number;
+  avg_value: number;
+  max_value: number;
+  key: string;
+};
+
+/**
+ * Group driving events by event_type with frequency count and average/max value.
+ */
+export function groupEventsByType(events: Array<{ event_type: string; value: number }>): EventGroup[] {
+  const groups = new Map<string, { sum: number; max: number; count: number }>();
+
+  for (const event of events) {
+    const existing = groups.get(event.event_type);
+    if (existing) {
+      existing.sum += event.value;
+      existing.max = Math.max(existing.max, event.value);
+      existing.count += 1;
+    } else {
+      groups.set(event.event_type, { sum: event.value, max: event.value, count: 1 });
+    }
+  }
+
+  return Array.from(groups.entries())
+    .map(([event_type, data]) => ({
+      event_type,
+      count: data.count,
+      avg_value: data.sum / data.count,
+      max_value: data.max,
+      key: event_type,
+    }))
+    .sort((a, b) => b.count - a.count);
+}

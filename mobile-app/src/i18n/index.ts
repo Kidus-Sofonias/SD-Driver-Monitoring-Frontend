@@ -159,6 +159,7 @@ type TranslationKey =
   | "mark_risky"
   | "clear_label"
   | "events_label"
+  | "all_trips_history"
   | "no_events"
   | "latest_finalized_trip"
   | "post_analysis_summary"
@@ -332,6 +333,7 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     clear_label: "Clear label",
     events_label: "Events",
     no_events: "No events",
+    all_trips_history: "All trips history",
     latest_finalized_trip: "Latest finalized trip",
     post_analysis_summary: "Post-analysis summary",
     trip_ended: "Trip ended",
@@ -453,6 +455,7 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     clear_label: "ምልክት አጥፋ",
     events_label: "ክስተቶች",
     no_events: "ክስተት የለም",
+    all_trips_history: "ሁሉም የጉዞ ታሪክ",
     latest_finalized_trip: "የቅርብ ጊዜ የተጠናቀቀ ጉዞ",
     post_analysis_summary: "ከሂደት በኋላ ማጠቃለያ",
     trip_ended: "ጉዞ ተጠናቋል",

@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { SkeletonCard } from "../components/SkeletonShimmer";
 import { TextField } from "../components/TextField";
 import { formatDateTime, formatWholeNumber, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
@@ -14,6 +15,13 @@ type Props = {
   onBack: () => void;
   onOpenTrip: (tripId: string) => Promise<void>;
 };
+
+function renderDelta(value: number | null) {
+  if (value === null || value === undefined) {
+    return "--";
+  }
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
+}
 
 export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
   const colors = useThemeColors();
@@ -37,32 +45,43 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
     setPassword("");
   }, [selectedAdminDriver]);
 
-  if (!selectedAdminDriver) {
-    return (
-      <Card>
-        <Text style={[styles.emptyText, { color: colors.muted }]}>Choose a driver from the directory to manage their account.</Text>
-      </Card>
-    );
-  }
-
-  const driver = selectedAdminDriver;
-  const scoredTrips = selectedAdminDriverTrips.filter((trip) => trip.score !== null && trip.score !== undefined);
+  // ALL hooks must be called BEFORE any early return — React rules of hooks.
+  const driver = selectedAdminDriver!;
+  const scoredTrips = useMemo(
+    () => selectedAdminDriverTrips.filter((trip) => trip.score !== null && trip.score !== undefined),
+    [selectedAdminDriverTrips]
+  );
   const overallScore = useMemo(() => {
     if (!scoredTrips.length) {
       return null;
     }
     return Math.round(scoredTrips.reduce((sum, trip) => sum + (trip.score || 0), 0) / scoredTrips.length);
   }, [scoredTrips]);
-  const displayedOverallScore = selectedAdminDriverInsights?.overall_average_score !== null && selectedAdminDriverInsights?.overall_average_score !== undefined
-    ? Math.round(selectedAdminDriverInsights.overall_average_score)
-    : overallScore;
+  const displayedOverallScore = useMemo(
+    () =>
+      selectedAdminDriverInsights?.overall_average_score !== null && selectedAdminDriverInsights?.overall_average_score !== undefined
+        ? Math.round(selectedAdminDriverInsights.overall_average_score)
+        : overallScore,
+    [selectedAdminDriverInsights?.overall_average_score, overallScore]
+  );
   const activeTrendWindow = selectedAdminDriverInsights?.[selectedTrendView] ?? null;
 
-  function renderDelta(value: number | null) {
-    if (value === null || value === undefined) {
-      return "--";
-    }
-    return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
+  if (busy) {
+    return (
+      <View style={styles.root}>
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={6} />
+        <SkeletonCard lines={3} />
+      </View>
+    );
+  }
+
+  if (!selectedAdminDriver) {
+    return (
+      <Card>
+        <Text style={[styles.emptyText, { color: colors.muted }]}>Choose a driver from the directory to manage their account.</Text>
+      </Card>
+    );
   }
 
   function renderTrendChart(window: DriverTrendWindow, options?: { expanded?: boolean }) {
@@ -350,8 +369,7 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
         <View style={styles.tripList}>
           {scoredTrips.length ? (
             scoredTrips.map((trip) => (
-              <Pressable key={trip.id} onPress={() => void onOpenTrip(trip.id)} style={({ pressed }) => [pressed ? styles.pressed : null]}>
-                <View style={[styles.tripRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
+              <Pressable key={trip.id} onPress={() => void onOpenTrip(trip.id)} style={({ pressed }) => [styles.tripRow, { backgroundColor: pressed ? colors.accent : colors.panelRaised, borderColor: pressed ? colors.accentStrong : colors.line }]}>
                   <View style={styles.tripMeta}>
                     <Text style={[styles.tripLabel, { color: colors.heading }]}>{trip.id.slice(0, 8)}...</Text>
                     <Text style={[styles.tripSubtle, { color: colors.muted }]}>
@@ -369,7 +387,6 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
                       {titleCase(trip.risk_level || trip.status)}
                     </Text>
                   </View>
-                </View>
               </Pressable>
             ))
           ) : (

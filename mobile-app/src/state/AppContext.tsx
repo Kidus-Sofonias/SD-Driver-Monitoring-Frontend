@@ -33,6 +33,7 @@ type AppState = {
   selectedReview: ReviewTrip | null;
   selectedTripDetail: TripDetail | null;
   selectedTripRoute: TripRoute | null;
+  allTrips: Trip[];
   adminDrivers: AdminDriver[];
   selectedAdminDriver: AdminDriver | null;
   selectedAdminDriverTrips: Trip[];
@@ -198,6 +199,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     selectedReview: null,
     selectedTripDetail: null,
     selectedTripRoute: null,
+    allTrips: [],
     adminDrivers: [],
     selectedAdminDriver: null,
     selectedAdminDriverTrips: [],
@@ -239,26 +241,51 @@ export function AppProvider({ children }: PropsWithChildren) {
     void bootstrap();
   }, []);
 
+  // Lightweight interval: only do minimal work when no trip is active.
+  // Heavier upload logic only fires when an active trip exists.
   useEffect(() => {
+    let tickCount = 0;
     const timer = setInterval(() => {
+      const current = stateRef.current;
+
+      // No session at all — skip everything
+      if (!current.session) {
+        return;
+      }
+
+      tickCount++;
+
+      if (!current.activeTrip) {
+        // Only check snapshot every 3 ticks to reduce load
+        if (tickCount % 3 !== 0) {
+          return;
+        }
+        const snapshot = collectorRef.current.snapshot();
+        setState((prev) => {
+          if (prev.captureMode === snapshot.mode && prev.bufferedSampleCount === snapshot.bufferedCount) {
+            return prev;
+          }
+          return { ...prev, captureMode: snapshot.mode, bufferedSampleCount: snapshot.bufferedCount };
+        });
+        return;
+      }
+
+      if (autoUploadInFlightRef.current) {
+        return;
+      }
+
       const snapshot = collectorRef.current.snapshot();
 
       setState((current) => {
         if (current.captureMode === snapshot.mode && current.bufferedSampleCount === snapshot.bufferedCount) {
           return current;
         }
-
         return {
           ...current,
           captureMode: snapshot.mode,
           bufferedSampleCount: snapshot.bufferedCount,
         };
       });
-
-      const current = stateRef.current;
-      if (!current.session || !current.activeTrip || autoUploadInFlightRef.current) {
-        return;
-      }
 
       if (snapshot.bufferedCount <= 0) {
         return;
@@ -370,11 +397,12 @@ export function AppProvider({ children }: PropsWithChildren) {
   }
 
   async function refreshAllInternal(apiBaseUrl: string, session: Session) {
-    const [activeTrip, trips, reviewItems, adminDrivers] = await Promise.all([
+    const [activeTrip, trips, reviewItems, adminDrivers, allTrips] = await Promise.all([
       api.getActiveTrip(apiBaseUrl, session.token.access_token),
       api.listTrips(apiBaseUrl, session.token.access_token),
       session.user.is_admin ? api.getReviewDashboard(apiBaseUrl, session.token.access_token) : Promise.resolve([]),
-      session.user.is_admin ? api.getAdminDrivers(apiBaseUrl, session.token.access_token) : Promise.resolve([])
+      session.user.is_admin ? api.getAdminDrivers(apiBaseUrl, session.token.access_token) : Promise.resolve([]),
+      session.user.is_admin ? api.listAllTrips(apiBaseUrl, session.token.access_token) : Promise.resolve([])
     ]);
     if (activeTrip) {
       await collectorRef.current.start();
@@ -437,6 +465,7 @@ export function AppProvider({ children }: PropsWithChildren) {
         activeTrip,
         pendingFinalizeTrip,
         trips,
+        allTrips: session.user.is_admin ? allTrips : [],
         latestResult,
         reviewItems,
         adminDrivers,
@@ -496,6 +525,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       activeTrip: null,
       pendingFinalizeTrip: null,
       trips: [],
+      allTrips: [],
       latestResult: null,
       reviewItems: [],
       selectedReview: null,
@@ -789,20 +819,16 @@ export function AppProvider({ children }: PropsWithChildren) {
       return;
     }
     await runBusy(async () => {
-      const review = await api.getTripReview(state.apiBaseUrl, state.session!.token.access_token, tripId);
-      const route = review.driver_user_id
-        ? await api.getAdminDriverTripRoute(
-            state.apiBaseUrl,
-            state.session!.token.access_token,
-            review.driver_user_id,
-            tripId
-          )
-        : null;
+      const [review, tripRoute] = await Promise.all([
+        api.getTripReview(state.apiBaseUrl, state.session!.token.access_token, tripId),
+        // Admin must use the admin route endpoint because the regular one filters by user_id
+        api.getAdminTripRoute(state.apiBaseUrl, state.session!.token.access_token, tripId).catch(() => null),
+      ]);
       setState((current) => ({
         ...current,
         selectedReview: review,
         selectedTripDetail: null,
-        selectedTripRoute: route
+        selectedTripRoute: tripRoute
       }));
     });
   }
@@ -812,12 +838,19 @@ export function AppProvider({ children }: PropsWithChildren) {
   }
 
   async function loadTripDetail(tripId: string) {
-    if (!state.session) {
+    const currentSession = state.session;
+    if (!currentSession) {
       return;
     }
+    const token = currentSession.token.access_token;
+    const isAdmin = currentSession.user.is_admin;
     await runBusy(async () => {
-      const tripDetail = await api.getTripDetail(state.apiBaseUrl, state.session!.token.access_token, tripId);
-      const tripRoute = await api.getTripRoute(state.apiBaseUrl, state.session!.token.access_token, tripId).catch(() => null);
+      const tripDetail = await api.getTripDetail(state.apiBaseUrl, token, tripId);
+      // Admin users need admin route endpoint; regular users use the regular one
+      const tripRoute = await (isAdmin
+        ? api.getAdminTripRoute(state.apiBaseUrl, token, tripId)
+        : api.getTripRoute(state.apiBaseUrl, token, tripId)
+      ).catch(() => null);
       setState((current) => ({
         ...current,
         selectedTripDetail: tripDetail,

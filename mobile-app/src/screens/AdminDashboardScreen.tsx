@@ -2,8 +2,9 @@ import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
-import { FloatingOrb, Reveal } from "../components/Motion";
+import { Reveal } from "../components/Motion";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { SkeletonCard } from "../components/SkeletonShimmer";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
 import { formatPercent, titleCase } from "../lib/format";
@@ -31,11 +32,15 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const { t, translateDynamic } = useI18n();
-  const { reviewItems } = useApp();
+  const { busy, healthLabel, reviewItems } = useApp();
   const safeReviewItems = Array.isArray(reviewItems) ? reviewItems : [];
   const isWide = width >= 1080;
+  const loading = safeReviewItems.length === 0 && (healthLabel === "Checking backend..." || healthLabel === "Backend unavailable" || busy);
 
+  // NOTE: loading check must come AFTER all hooks to avoid React hook-order violations.
+  // analytics is null when loading, falling through to a skeleton render below.
   const analytics = useMemo(() => {
+    if (loading) return null;
     const totalTrips = safeReviewItems.length;
     const pendingReviews = safeReviewItems.filter((item) => item.review_label === null || item.review_label === undefined).length;
     const riskCounts = {
@@ -115,6 +120,22 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
     };
   }, [safeReviewItems, translateDynamic]);
 
+  // Early return AFTER all hooks — safe for React's rules of hooks
+  if (loading || !analytics) {
+    return (
+      <View style={styles.root}>
+        <View style={[styles.hero, { backgroundColor: colors.darkSurfaceDeep }]}>
+          <View style={styles.heroCopy}>
+            <SkeletonCard lines={2} style={{ backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.10)" }} />
+            <SkeletonCard lines={2} style={{ backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.10)" }} />
+          </View>
+        </View>
+        <SkeletonCard lines={6} />
+        <SkeletonCard lines={3} />
+      </View>
+    );
+  }
+
   const riskSegments = [
     { label: translateDynamic("low"), value: analytics.riskCounts.low, color: colors.lowRisk },
     { label: translateDynamic("medium"), value: analytics.riskCounts.medium, color: colors.caution },
@@ -125,8 +146,6 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
   return (
     <View style={styles.root}>
       <View style={[styles.hero, { backgroundColor: colors.darkSurfaceDeep }]}>
-        <FloatingOrb style={styles.heroOrbPrimary} duration={9000} xRange={[-9, 11]} yRange={[-10, 10]} />
-        <FloatingOrb style={styles.heroOrbSecondary} duration={11800} xRange={[-8, 10]} yRange={[-8, 14]} />
         <View style={styles.heroCopy}>
           <Reveal delay={30}>
             <Text style={styles.heroEyebrow}>{t("admin_ops")}</Text>
@@ -347,24 +366,7 @@ const styles = StyleSheet.create({
     fontSize: type.title,
     fontWeight: "800",
   },
-  heroOrbPrimary: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    top: -64,
-    right: -36,
-    backgroundColor: "rgba(125, 211, 252, 0.16)",
-  },
-  heroOrbSecondary: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    borderRadius: 999,
-    left: -20,
-    bottom: -28,
-    backgroundColor: "rgba(199,243,107,0.08)",
-  },
+
   grid: {
     gap: spacing.lg,
   },
