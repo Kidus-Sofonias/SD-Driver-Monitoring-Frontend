@@ -225,6 +225,21 @@ export type TripSampleCount = {
   count: number;
 };
 
+export type LiveAlertEvent = {
+  event_type: string;
+  value: number;
+  occurred_at?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+};
+
+export type LiveAlertMessage = {
+  type: "connected" | "event_alert" | "ping";
+  trip_id?: string | null;
+  event?: LiveAlertEvent | null;
+  sent_at?: string | null;
+};
+
 export type Session = {
   user: User;
   token: TokenData;

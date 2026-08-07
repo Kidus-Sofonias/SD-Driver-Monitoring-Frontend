@@ -1,18 +1,47 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
-import { formatDateTime, formatDurationSince, titleCase } from "../lib/format";
+import { formatDateTime, formatDurationSince, formatTimeAgo, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
-import { fontFamily, spacing, type } from "../theme/tokens";
+import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
 
 type Props = {
   onOpenResults: () => void;
 };
+
+type AlertLabelKey =
+  | "alert_hard_brake"
+  | "alert_emergency_brake"
+  | "alert_hard_accel"
+  | "alert_aggressive_turn"
+  | "alert_overspeed"
+  | "alert_severe_overspeed"
+  | "alert_unstable_motion";
+
+function alertLabelKey(eventType: string): AlertLabelKey {
+  switch (eventType) {
+    case "emergency_brake":
+      return "alert_emergency_brake";
+    case "hard_accel":
+      return "alert_hard_accel";
+    case "aggressive_turn":
+      return "alert_aggressive_turn";
+    case "overspeed":
+      return "alert_overspeed";
+    case "severe_overspeed":
+      return "alert_severe_overspeed";
+    case "unstable_motion":
+      return "alert_unstable_motion";
+    case "hard_brake":
+    default:
+      return "alert_hard_brake";
+  }
+}
 
 export function DriveScreen({ onOpenResults }: Props) {
   const colors = useThemeColors();
@@ -23,10 +52,12 @@ export function DriveScreen({ onOpenResults }: Props) {
     busy,
     bufferedSampleCount,
     captureMode,
+    dismissLiveAlert,
     endTrip,
     error,
     finalizeTrip,
     latestResult,
+    liveAlerts,
     pendingFinalizeTrip,
     startTrip,
     uploadSensorBatch,
@@ -46,8 +77,49 @@ export function DriveScreen({ onOpenResults }: Props) {
   const divider1 = <View key="d1" style={[styles.statDivider, { backgroundColor: colors.line }]} />;
   const divider2 = <View key="d2" style={[styles.statDivider, { backgroundColor: colors.line }]} />;
 
+  const visibleAlerts = activeTrip ? liveAlerts : [];
+
   return (
     <View style={styles.root}>
+      {visibleAlerts.length > 0 ? (
+        <View style={styles.alertStack}>
+          <Text style={[styles.alertEyebrow, { color: colors.muted }]}>{t("live_alerts")}</Text>
+          {visibleAlerts.map((item) => {
+            const event = item.message.event;
+            const isEmergency = event?.event_type === "emergency_brake" || event?.event_type === "severe_overspeed";
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => dismissLiveAlert(item.id)}
+                style={[
+                  styles.alertBanner,
+                  {
+                    backgroundColor: isEmergency ? "#3D1418" : colors.panelRaised,
+                    borderColor: isEmergency ? "#8A2B31" : colors.line,
+                  },
+                ]}
+              >
+                <View style={[styles.alertDot, { backgroundColor: isEmergency ? colors.highRisk : colors.accentStrong }]} />
+                <View style={styles.alertCopy}>
+                  <Text
+                    style={[
+                      styles.alertTitle,
+                      { color: isEmergency ? "#FFE3E5" : colors.heading },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {t(alertLabelKey(event?.event_type || "hard_brake"))}
+                  </Text>
+                  <Text style={[styles.alertMeta, { color: colors.muted }]}>{"\u00b7"} {formatTimeAgo(item.message.sent_at)}</Text>
+                </View>
+                <Text style={[styles.alertValue, { color: colors.muted }]}>
+                  {event ? `${Math.abs(event.value).toFixed(1)}` : ""}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
       <Card>
         {activeTrip ? (
           <>
@@ -183,6 +255,52 @@ export function DriveScreen({ onOpenResults }: Props) {
 const styles = StyleSheet.create({
   root: {
     gap: spacing.lg,
+  },
+  alertStack: {
+    gap: spacing.xs,
+  },
+  alertEyebrow: {
+    fontSize: type.micro,
+    fontWeight: "700",
+    fontFamily: fontFamily.heading,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  alertBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  alertDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  alertCopy: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexWrap: "wrap",
+  },
+  alertTitle: {
+    fontSize: type.body,
+    fontWeight: "700",
+    fontFamily: fontFamily.heading,
+    flexShrink: 1,
+  },
+  alertMeta: {
+    fontSize: type.caption,
+    fontFamily: fontFamily.body,
+  },
+  alertValue: {
+    fontSize: type.section,
+    fontWeight: "800",
+    fontFamily: fontFamily.display,
   },
   eyebrow: {
     fontSize: type.micro,

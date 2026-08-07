@@ -204,7 +204,15 @@ type TranslationKey =
   | "weekly_graph"
   | "monthly_graph"
   | "close"
-  | "choose_driver_from_directory";
+  | "choose_driver_from_directory"
+  | "live_alerts"
+  | "alert_hard_brake"
+  | "alert_emergency_brake"
+  | "alert_hard_accel"
+  | "alert_aggressive_turn"
+  | "alert_overspeed"
+  | "alert_severe_overspeed"
+  | "alert_unstable_motion";
 
 const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -410,6 +418,14 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     monthly_graph: "Monthly graph",
     close: "Close",
     choose_driver_from_directory: "Choose a driver from the directory to manage their account.",
+    live_alerts: "Live alerts",
+    alert_hard_brake: "Hard braking detected",
+    alert_emergency_brake: "Emergency braking detected",
+    alert_hard_accel: "Harsh acceleration detected",
+    alert_aggressive_turn: "Aggressive turn detected",
+    alert_overspeed: "Overspeeding detected",
+    alert_severe_overspeed: "Severe overspeeding detected",
+    alert_unstable_motion: "Unstable motion / rough road",
   },
   am: {
     home: "መነሻ",
@@ -614,6 +630,14 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     monthly_graph: "ወርሃዊ ግራፍ",
     close: "ዝጋ",
     choose_driver_from_directory: "አካውንታቸውን ለማስተዳደር ከመዝገቡ አሽከርካሪ ይምረጡ።",
+    live_alerts: "የቀጥታ ማስጠንቀቂያዎች",
+    alert_hard_brake: "ከባድ ብሬክ ተገኝቷል",
+    alert_emergency_brake: "የድንገት ብሬክ ተገኝቷል",
+    alert_hard_accel: "ከባድ ፍጥነት መጨመር ተገኝቷል",
+    alert_aggressive_turn: "አደገኛ መዞር ተገኝቷል",
+    alert_overspeed: "ከመጠን በላይ ፍጥነት ተገኝቷል",
+    alert_severe_overspeed: "እጅግ ከፍተኛ ፍጥነት ተገኝቷል",
+    alert_unstable_motion: "ያልተረጋጋ እንቅስቃሴ / ሻካራ መንገድ",
   },
   om: {
     home: "Mana",
@@ -818,6 +842,14 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     monthly_graph: "Graafii ji'ootaa",
     close: "Cufi",
     choose_driver_from_directory: "Galmee irraa oftuu filadhu akka herrega isaanii bulchuuf.",
+    live_alerts: "Akeekkaa yeroo dhugaa",
+    alert_hard_brake: "Bireekii cimaa hubatame",
+    alert_emergency_brake: "Bireekii hatattamaa hubatame",
+    alert_hard_accel: "Saffisni dabaluun cimaa hubatame",
+    alert_aggressive_turn: "Garagalchi cimaa hubatame",
+    alert_overspeed: "Saffisni ol'aanaa hubatame",
+    alert_severe_overspeed: "Saffisni baay'ee ol'aanaa hubatame",
+    alert_unstable_motion: "Sochiin tasgabbaa'aa hin taane / karaan cime",
   },
 };
 

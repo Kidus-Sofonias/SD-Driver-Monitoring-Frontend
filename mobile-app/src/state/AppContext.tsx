@@ -17,7 +17,7 @@ import {
   saveThemeMode
 } from "../lib/storage";
 import { createPhoneSensorCollector, generateMockSensorBurst, type SensorCaptureMode } from "../services/sensorCapture";
-import type { AdminDriver, DriverInsights, FinalizeTrip, ReviewDashboardItem, ReviewTrip, Session, Trip, TripDetail, TripRoute } from "../types/api";
+import type { AdminDriver, DriverInsights, FinalizeTrip, LiveAlertMessage, ReviewDashboardItem, ReviewTrip, Session, Trip, TripDetail, TripRoute } from "../types/api";
 
 type AppState = {
   booting: boolean;
@@ -44,6 +44,7 @@ type AppState = {
   uploadedBurstCount: number;
   lastUploadAt: string | null;
   dismissedPendingTripIds: string[];
+  liveAlerts: Array<{ id: string; message: LiveAlertMessage }>;
   themeMode: "light" | "dark";
   languageMode: LanguageMode;
 };
@@ -70,6 +71,7 @@ type AppContextValue = AppState & {
   clearSelectedAdminDriver: () => void;
   setThemeMode: (mode: "light" | "dark") => Promise<void>;
   setLanguageMode: (mode: LanguageMode) => Promise<void>;
+  dismissLiveAlert: (id: string) => void;
   clearError: () => void;
 };
 
@@ -81,6 +83,9 @@ const AUTO_UPLOAD_MIN_BUFFERED_SAMPLES = 4;
 const UPLOAD_BACKOFF_INITIAL_MS = 5000;
 const UPLOAD_BACKOFF_MAX_MS = 30000;
 const UPLOAD_FAILURE_ERROR_THRESHOLD = 2;
+const ALERT_SOCKET_RECONNECT_MS = 6000;
+const LIVE_ALERT_DISPLAY_MS = 6000;
+const LIVE_ALERT_MAX = 4;
 
 function pickPendingFinalizeTrip(trips: Trip[], dismissedPendingTripIds: string[]) {
   return (
@@ -215,14 +220,33 @@ export function AppProvider({ children }: PropsWithChildren) {
     uploadedBurstCount: 0,
     lastUploadAt: null,
     dismissedPendingTripIds: [],
+    liveAlerts: [],
     themeMode: "dark",
     languageMode: "en"
   });
   const stateRef = useRef(state);
+  const alertSocketRef = useRef<ReturnType<typeof api.openAlertSocket> | null>(null);
+  const alertReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alertDismissTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const liveAlertSeqRef = useRef(0);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Clean up any pending alert dismiss timers and the alert socket on unmount.
+  useEffect(() => {
+    return () => {
+      if (alertReconnectTimerRef.current) {
+        clearTimeout(alertReconnectTimerRef.current);
+        alertReconnectTimerRef.current = null;
+      }
+      alertSocketRef.current?.close();
+      alertSocketRef.current = null;
+      alertDismissTimersRef.current.forEach((timer) => clearTimeout(timer));
+      alertDismissTimersRef.current.clear();
+    };
+  }, []);
 
   function dismissPendingTrip(tripId: string) {
     setState((current) => {
@@ -313,6 +337,92 @@ export function AppProvider({ children }: PropsWithChildren) {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Phase 5: live driver alerts over WebSocket. The socket is only open while
+  // a session exists AND a trip is actively in progress; it reconnects with a
+  // backoff if the connection drops mid-trip.
+  useEffect(() => {
+    const current = stateRef.current;
+    const token = current.session?.token.access_token;
+    const trip = current.activeTrip;
+    const shouldConnect = Boolean(token) && Boolean(trip) && trip?.status === "active";
+
+    function closeSocket() {
+      if (alertReconnectTimerRef.current) {
+        clearTimeout(alertReconnectTimerRef.current);
+        alertReconnectTimerRef.current = null;
+      }
+      alertSocketRef.current?.close();
+      alertSocketRef.current = null;
+    }
+
+    if (!shouldConnect) {
+      closeSocket();
+      return () => closeSocket();
+    }
+
+    const baseUrl = current.apiBaseUrl;
+    const accessToken = token as string;
+    let disposed = false;
+
+    function open() {
+      if (disposed) {
+        return;
+      }
+      closeSocket();
+      const handle = api.openAlertSocket(
+        baseUrl,
+        accessToken,
+        (message) => {
+          if (message.type !== "event_alert" || !message.event) {
+            return;
+          }
+          const seq = ++liveAlertSeqRef.current;
+          const id = `${Date.now()}-${seq}`;
+          setState((prev) => ({
+            ...prev,
+            liveAlerts: [{ id, message }, ...prev.liveAlerts].slice(0, LIVE_ALERT_MAX)
+          }));
+          const timer = setTimeout(() => dismissLiveAlert(id), LIVE_ALERT_DISPLAY_MS);
+          alertDismissTimersRef.current.set(id, timer);
+        },
+        undefined,
+        () => {
+          // onClose: if the trip is still active, retry with a backoff.
+          if (disposed) {
+            return;
+          }
+          const stillActive = stateRef.current.activeTrip?.status === "active";
+          if (stillActive && !alertReconnectTimerRef.current) {
+            alertReconnectTimerRef.current = setTimeout(() => {
+              alertReconnectTimerRef.current = null;
+              open();
+            }, ALERT_SOCKET_RECONNECT_MS);
+          }
+        }
+      );
+      alertSocketRef.current = handle;
+    }
+
+    open();
+    return () => {
+      disposed = true;
+      closeSocket();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.session?.token.access_token, state.activeTrip?.id, state.activeTrip?.status]);
+
+  function dismissLiveAlert(id: string) {
+    const timer = alertDismissTimersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      alertDismissTimersRef.current.delete(id);
+    }
+    setState((prev) => ({
+      ...prev,
+      liveAlerts: prev.liveAlerts.filter((item) => item.id !== id)
+    }));
+  }
 
   async function hydrateRemoteState(apiBaseUrl: string, initialSession: Session | null) {
     const initialToken = initialSession?.token.access_token || null;
@@ -545,7 +655,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       captureMode: "idle",
       bufferedSampleCount: 0,
       uploadedBurstCount: 0,
-      lastUploadAt: null
+      lastUploadAt: null,
+      liveAlerts: []
     }));
   }
 
@@ -598,6 +709,7 @@ export function AppProvider({ children }: PropsWithChildren) {
           activeTrip: trip,
           pendingFinalizeTrip: null,
           latestResult: null,
+          liveAlerts: [],
           selectedReview: null,
           selectedTripDetail: null,
           selectedTripRoute: null,
@@ -1009,6 +1121,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       clearSelectedAdminDriver,
       setThemeMode,
       setLanguageMode,
+      dismissLiveAlert,
       clearError
     }),
     [state]

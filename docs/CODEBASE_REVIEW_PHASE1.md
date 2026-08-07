@@ -419,3 +419,16 @@ PostgreSQL DB through the v2 scoring pipeline via a new batched, resumable, dry-
 `scoring_version: "v2"`, 14 insufficient-sample trips preserved (not deleted), **0 failures**, mean
 score 47.4 → 32.9, and persisted event counts now match v2 semantics. Resolves the historical-data
 inconsistency left open at the end of Phase 3 and **M-4** (sequential, unbatched reprocessing).
+
+## 18. Phase 5 resolution status (added 2026-08-07)
+
+Phase 5 (see [PHASE5_ALERTS.md](./PHASE5_ALERTS.md)) delivered the platform's first real-time channel:
+a WebSocket alert stream (`/api/v1/ws/alerts`) backed by an in-memory pub/sub hub and an incremental
+live-event detector that reuses the v2 pipeline over a bounded rolling window per upload. Drivers get
+immediate, non-intrusive, translatable in-app alerts for every v2 event category while a trip is in
+progress; the mobile app manages the socket lifecycle (connect on trip start, reconnect with backoff,
+auto-dismiss). Live alerts are transient (finalize remains the single authority for persisted
+events), a reconnect replay endpoint is owner-scoped, and detection/alerting is best-effort so uploads
+never fail because of it. This is the first half of the net-new real-time surface flagged in §3.8 and
+**L-6** (website "live monitoring" claims); Phases 6–7 add the driver monitoring screens and admin live
+dashboard, Phase 8 adds accident detection notifications.

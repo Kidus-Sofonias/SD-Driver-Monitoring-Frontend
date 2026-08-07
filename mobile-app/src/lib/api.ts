@@ -15,7 +15,8 @@ import type {
   Session,
   TripSampleCount,
   Trip,
-  User
+  User,
+  LiveAlertMessage
 } from "../types/api";
 
 type RequestOptions = {
@@ -352,4 +353,63 @@ export async function deleteAdminDriver(baseUrl: string, token: string, driverId
     token,
     baseUrl
   });
+}
+
+/**
+ * Convert an http(s) API base URL into the equivalent ws(s) alert-stream URL.
+ */
+function toAlertSocketUrl(baseUrl: string, token: string) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  const wsScheme = normalized.startsWith("https") ? "wss" : "ws";
+  return `${wsScheme}://${normalized.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/ws/alerts?token=${encodeURIComponent(token)}`;
+}
+
+export type AlertSocketHandle = {
+  close: () => void;
+  readyState: () => number;
+};
+
+export function openAlertSocket(
+  baseUrl: string,
+  token: string,
+  onMessage: (message: LiveAlertMessage) => void,
+  onOpen?: () => void,
+  onClose?: () => void
+): AlertSocketHandle {
+  let socket: WebSocket | null = null;
+  try {
+    socket = new WebSocket(toAlertSocketUrl(baseUrl, token));
+  } catch {
+    // Invalid URL — surface a closed socket so callers can retry.
+    return { close: () => undefined, readyState: () => 3 };
+  }
+
+  socket.onopen = () => {
+    onOpen?.();
+  };
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(String((event as { data: string }).data)) as LiveAlertMessage;
+      onMessage(data);
+    } catch {
+      // Ignore malformed frames.
+    }
+  };
+  socket.onclose = () => {
+    onClose?.();
+  };
+  socket.onerror = () => {
+    // onclose fires after onerror in RN; nothing else needed here.
+  };
+
+  return {
+    close: () => {
+      try {
+        socket?.close();
+      } catch {
+        // already closed
+      }
+    },
+    readyState: () => socket?.readyState ?? 3
+  };
 }
