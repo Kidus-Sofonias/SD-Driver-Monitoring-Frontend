@@ -399,3 +399,14 @@ counted), **CRIT-2** (NaN-safe finalization), **CRIT-3** (no fabricated zero-spe
 (speed_variation double counting removed), **H-4** (event ownership enforced), **H-5** (pagination),
 **H-6** (insufficient-sample trips preserved, no GET side effects), and **H-7** (active-only uploads +
 rate limiting). Open items are tagged for Phases 3–9 in the issue list above.
+
+## 16. Phase 3 resolution status (added 2026-08-07)
+
+Phase 3 (see [PHASE3_SCORING.md](./PHASE3_SCORING.md)) replaced the detection and scoring model:
+raw-signal event detection with industry-standard thresholds (brake/accel ≥ 0.33 g, emergency ≥ 0.66 g,
+cornering ≥ 0.45 g lateral), new overspeed + severe-overspeed categories, chargeable emergency brakes,
+exposure-normalized scoring (events/hour density term), bounded smoothness penalties, and new risk bands
+(≥85 low / 65–84 medium / <65 high). Resolves **H-1** (flat penalties), **H-2** (no overspeeding), and
+**H-3** (orientation-dead turn detection); the `unstable_motion` noise floor (part of **CRIT-4**) is
+fixed via the 2.5 m/s³ raw-jerk threshold. Threshold calibration against real driving data is deferred
+to Phase 9.
