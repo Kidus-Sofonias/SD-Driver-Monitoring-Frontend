@@ -232,7 +232,14 @@ type TranslationKey =
   | "event_counters"
   | "trip_stats"
   | "distance_km"
-  | "no_events_yet";
+  | "no_events_yet"
+  | "live_fleet"
+  | "active_now"
+  | "no_active_fleet_trips"
+  | "connection_live"
+  | "connection_stale"
+  | "connection_disconnected"
+  | "fleet_alerts";
 
 const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -466,6 +473,13 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     trip_stats: "Trip stats",
     distance_km: "Distance",
     no_events_yet: "No events detected yet",
+    live_fleet: "Live fleet",
+    active_now: "active now",
+    no_active_fleet_trips: "No drivers on the road right now",
+    connection_live: "Live",
+    connection_stale: "Stale",
+    connection_disconnected: "Disconnected",
+    fleet_alerts: "Fleet alerts",
   },
   am: {
     home: "መነሻ",
@@ -698,6 +712,13 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     trip_stats: "የጉዞ ስታቲስቲክስ",
     distance_km: "ርቀት",
     no_events_yet: "እስካሁን ክስተቶች አልተገኙም",
+    live_fleet: "የቀጥታ መርከብ",
+    active_now: "አሁን ንቁ",
+    no_active_fleet_trips: "አሁን በመንገድ ላይ አሽከርካሪዎች የሉም",
+    connection_live: "ቀጥታ",
+    connection_stale: "ያረጀ",
+    connection_disconnected: "ተቋርጧል",
+    fleet_alerts: "የመርከብ ማስጠንቀቂያዎች",
   },
   om: {
     home: "Mana",
@@ -930,6 +951,13 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     trip_stats: "Tilmaama imalaa",
     distance_km: "Fageenya",
     no_events_yet: "Hanga ammaatti taateewwan hin argamne",
+    live_fleet: "Fleet yeroo dhugaa",
+    active_now: "amma itti jira",
+    no_active_fleet_trips: "Ooftoonni karaa irra amma hin jiran",
+    connection_live: "Yeroo dhugaa",
+    connection_stale: "Dulloome",
+    connection_disconnected: "Citatte",
+    fleet_alerts: "Akeekkaa fleet",
   },
 };
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { Card } from "../components/Card";
@@ -7,10 +7,14 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { SkeletonCard } from "../components/SkeletonShimmer";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
+import * as api from "../lib/api";
 import { formatPercent, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
+import type { AdminLiveTrip } from "../types/api";
+
+const LIVE_FLEET_POLL_MS = 5000;
 
 type Props = {
   onOpenReview: () => void;
@@ -32,10 +36,38 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const { t, translateDynamic } = useI18n();
-  const { busy, healthLabel, reviewItems } = useApp();
+  const { apiBaseUrl, busy, healthLabel, liveAlerts, reviewItems, session } = useApp();
   const safeReviewItems = Array.isArray(reviewItems) ? reviewItems : [];
   const isWide = width >= 1080;
   const loading = safeReviewItems.length === 0 && (healthLabel === "Checking backend..." || healthLabel === "Backend unavailable" || busy);
+
+  const [liveTrips, setLiveTrips] = useState<AdminLiveTrip[]>([]);
+  const token = session?.token.access_token ?? null;
+
+  // Phase 7: fleet-wide live monitoring. Poll active trips every few seconds.
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    const accessToken: string = token;
+    let active = true;
+    async function poll() {
+      try {
+        const payload = await api.getAdminLiveTrips(apiBaseUrl, accessToken);
+        if (active) {
+          setLiveTrips(Array.isArray(payload) ? payload : []);
+        }
+      } catch {
+        // Keep the last good snapshot on transient failures.
+      }
+    }
+    void poll();
+    const timer = setInterval(poll, LIVE_FLEET_POLL_MS);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [token, apiBaseUrl]);
 
   // NOTE: loading check must come AFTER all hooks to avoid React hook-order violations.
   // analytics is null when loading, falling through to a skeleton render below.
@@ -171,6 +203,74 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
           ))}
         </View>
       </View>
+
+      {/* Phase 7: live fleet monitoring */}
+      <Card delay={90}>
+        <View style={styles.cardHeader}>
+          <View>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("live_fleet")}</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("trip_in_progress")}</Text>
+          </View>
+          <StatusPill
+            label={`${liveTrips.length} ${t("active_now")}`}
+            tone={liveTrips.length ? "good" : "neutral"}
+          />
+        </View>
+
+        {liveTrips.length > 0 ? (
+          <View style={styles.listStack}>
+            {liveTrips.map((trip) => {
+              const speedKmh =
+                trip.latest.speed_mps != null ? `${Math.max(0, Math.round(trip.latest.speed_mps * 3.6))} km/h` : "--";
+              const tone =
+                trip.connection_status === "live" ? "good" : trip.connection_status === "stale" ? "warn" : "bad";
+              const connectionLabel =
+                trip.connection_status === "live"
+                  ? t("connection_live")
+                  : trip.connection_status === "stale"
+                    ? t("connection_stale")
+                    : t("connection_disconnected");
+              return (
+                <Pressable key={trip.trip_id} onPress={() => void onOpenTrip(trip.trip_id)} style={({ pressed }) => [pressed ? styles.pressed : null]}>
+                  <View style={[styles.recentRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
+                    <View style={styles.driverMeta}>
+                      <Text style={[styles.driverLabel, { color: colors.heading }]} numberOfLines={1}>
+                        {trip.driver_email || trip.trip_id.slice(0, 8)}
+                      </Text>
+                      <Text style={[styles.driverSubtle, { color: colors.muted }]} numberOfLines={1}>
+                        {speedKmh} · {t("samples_uploaded").toLowerCase()}: {trip.samples_uploaded} · {t("events").toLowerCase()}: {trip.event_total}
+                      </Text>
+                    </View>
+                    <View style={styles.statRow}>
+                      <StatusPill label={`${trip.live_score.score}`} tone={trip.live_score.score >= 85 ? "good" : trip.live_score.score >= 65 ? "warn" : "bad"} />
+                      <StatusPill label={connectionLabel} tone={tone} />
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={[styles.body, { color: colors.muted }]}>{t("no_active_fleet_trips")}</Text>
+        )}
+
+        {liveAlerts.length > 0 ? (
+          <View style={[styles.listStack, styles.alertStack]}>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("fleet_alerts")}</Text>
+            {liveAlerts.slice(0, 4).map((item) => {
+              const event = item.message.event;
+              return (
+                <View key={item.id} style={[styles.alertRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
+                  <View style={[styles.alertDot, { backgroundColor: event?.event_type === "emergency_brake" ? colors.highRisk : colors.accentStrong }]} />
+                  <Text style={[styles.driverSubtle, { color: colors.heading }]} numberOfLines={1}>
+                    {(item.message.trip_id ?? "").slice(0, 8)} · {event ? event.event_type.replace(/_/g, " ") : "alert"}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+      </Card>
 
       <View style={[styles.grid, isWide ? styles.gridWide : null]}>
         <Card style={styles.flexCard} delay={120}>
@@ -493,6 +593,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     flexWrap: "wrap",
+  },
+  alertStack: {
+    marginTop: spacing.md,
+  },
+  alertRow: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  alertDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   pressed: {
     opacity: 0.88,

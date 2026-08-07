@@ -18,7 +18,8 @@ import type {
   User,
   LiveAlertMessage,
   WeatherPayload,
-  TripTelemetry
+  TripTelemetry,
+  AdminLiveTrip
 } from "../types/api";
 
 type RequestOptions = {
@@ -339,6 +340,10 @@ export async function submitReviewLabel(
 
 export async function listAllTrips(baseUrl: string, token: string) {
   return request<Trip[]>("/admin/trips", { token, baseUrl });
+}
+
+export async function getAdminLiveTrips(baseUrl: string, token: string) {
+  return request<AdminLiveTrip[]>("/admin/trips/live", { token, baseUrl, timeoutMs: 12000 });
 }
 
 

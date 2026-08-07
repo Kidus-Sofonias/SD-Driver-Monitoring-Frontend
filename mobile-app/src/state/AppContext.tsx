@@ -366,7 +366,10 @@ export function AppProvider({ children }: PropsWithChildren) {
     const current = stateRef.current;
     const token = current.session?.token.access_token;
     const trip = current.activeTrip;
-    const shouldConnect = Boolean(token) && Boolean(trip) && trip?.status === "active";
+    // Drivers connect while their trip is active; admins keep the socket open
+    // at all times to receive the fleet-wide alert stream (Phase 7).
+    const isAdmin = Boolean(current.session?.user.is_admin);
+    const shouldConnect = Boolean(token) && (isAdmin || (Boolean(trip) && trip?.status === "active"));
 
     function closeSocket() {
       if (alertReconnectTimerRef.current) {
@@ -409,11 +412,12 @@ export function AppProvider({ children }: PropsWithChildren) {
         },
         undefined,
         () => {
-          // onClose: if the trip is still active, retry with a backoff.
+          // onClose: if we should still be connected, retry with a backoff.
           if (disposed) {
             return;
           }
-          const stillActive = stateRef.current.activeTrip?.status === "active";
+          const stillActive =
+            stateRef.current.session?.user.is_admin || stateRef.current.activeTrip?.status === "active";
           if (stillActive && !alertReconnectTimerRef.current) {
             alertReconnectTimerRef.current = setTimeout(() => {
               alertReconnectTimerRef.current = null;
@@ -431,7 +435,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       closeSocket();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.session?.token.access_token, state.activeTrip?.id, state.activeTrip?.status]);
+  }, [state.session?.token.access_token, state.session?.user.is_admin, state.activeTrip?.id, state.activeTrip?.status]);
 
   // Remote-area resilience: when the app returns to the foreground mid-trip,
   // flush the outbox immediately instead of waiting for the next tick (the

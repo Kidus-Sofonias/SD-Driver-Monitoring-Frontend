@@ -225,6 +225,36 @@ export type TripSampleCount = {
   count: number;
 };
 
+export type AdminLiveTrip = {
+  trip_id: string;
+  driver_user_id: string;
+  driver_email: string | null;
+  started_at: string | null;
+  elapsed_s: number;
+  latest: {
+    ts: string | null;
+    speed_mps: number | null;
+    lat: number | null;
+    lon: number | null;
+    accuracy_m: number | null;
+    accel_mag_mps2: number | null;
+    longitudinal_accel_mps2: number | null;
+  };
+  samples_uploaded: number;
+  event_counts: Record<string, number>;
+  event_total: number;
+  live_score: {
+    score: number;
+    risk_level: "low" | "medium" | "high";
+    penalties: Record<string, number>;
+    density_penalty: number;
+    provisional: boolean;
+    scoring_version: string;
+  };
+  connection_status: "live" | "stale" | "disconnected";
+  last_sample_age_s: number | null;
+};
+
 export type TripTelemetry = {
   trip_id: string;
   status: string;
