@@ -71,6 +71,29 @@ prevent unbounded per-trip growth.
   label, relative time, peak value, and tap-to-dismiss.
 - **i18n** — all alert labels added in English, Amharic, and Afaan Oromoo.
 
+## 3.5 Live telemetry endpoint (Phase 6 prep)
+
+`GET /api/v1/trips/{trip_id}/telemetry` (owner-scoped, 404 otherwise) returns the payload the
+Phase 6 glance/details modes poll alongside the alert stream:
+
+```json
+{
+  "trip_id": "…", "status": "active", "started_at": "…", "elapsed_s": 123.4,
+  "samples_uploaded": 456,
+  "latest": {
+    "ts": "…", "speed_mps": 23.5, "lat": …, "lon": …, "accuracy_m": 6.0,
+    "accel_mag_mps2": 9.81, "longitudinal_accel_mps2": -2.1
+  },
+  "event_counts": {"hard_brake": 2}, "event_total": 2,
+  "recent_alerts": [ … ]
+}
+```
+
+Implemented by `app/services/live_monitor_service.py` (`LiveMonitorService`), which combines the
+latest stored sensor samples (new `SensorSampleRepository.list_latest_by_trip`) with the live
+detector's in-memory `event_counts`/`recent_alerts`. Event counters are live-transient (reset on
+server restart); finalize remains the source of truth for stored events.
+
 ## 4. Alert message contract
 
 ```json
