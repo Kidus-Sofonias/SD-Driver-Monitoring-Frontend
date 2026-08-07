@@ -410,3 +410,12 @@ exposure-normalized scoring (events/hour density term), bounded smoothness penal
 **H-3** (orientation-dead turn detection); the `unstable_motion` noise floor (part of **CRIT-4**) is
 fixed via the 2.5 m/s³ raw-jerk threshold. Threshold calibration against real driving data is deferred
 to Phase 9.
+
+## 17. Phase 4 resolution status (added 2026-08-07)
+
+Phase 4 (see [PHASE4_RECALC.md](./PHASE4_RECALC.md)) recalculated all historical trips on the deployed
+PostgreSQL DB through the v2 scoring pipeline via a new batched, resumable, dry-run-capable script
+(`backend/scripts/recalculate_trips_phase4.py`). Result: **55/55** eligible trips re-scored under
+`scoring_version: "v2"`, 14 insufficient-sample trips preserved (not deleted), **0 failures**, mean
+score 47.4 → 32.9, and persisted event counts now match v2 semantics. Resolves the historical-data
+inconsistency left open at the end of Phase 3 and **M-4** (sequential, unbatched reprocessing).
