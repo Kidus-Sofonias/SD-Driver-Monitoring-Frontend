@@ -207,7 +207,7 @@ export type TripRoute = {
 
 export type SensorSample = {
   timestamp: string;
-  speed: number;
+  speed: number | null;
   lat: number;
   lon: number;
   accuracy_m: number;

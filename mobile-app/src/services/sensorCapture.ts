@@ -461,7 +461,10 @@ export class PhoneSensorCollector {
 
           this.samples.push({
             timestamp,
-            speed: coords.speed ?? 0,
+            // CRIT-3 fix: when GPS reports no speed (coords.speed can be null on
+            // many devices), send null instead of fabricating 0 m/s. A fake 0
+            // made the backend detect a false hard-brake event (e.g. 50->0->50).
+            speed: coords.speed ?? null,
             lat: coords.latitude,
             lon: coords.longitude,
             accuracy_m: coords.accuracy ?? 0,
