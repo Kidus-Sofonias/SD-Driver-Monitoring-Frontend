@@ -17,7 +17,8 @@ import type {
   Trip,
   User,
   LiveAlertMessage,
-  WeatherPayload
+  WeatherPayload,
+  TripTelemetry
 } from "../types/api";
 
 type RequestOptions = {
@@ -271,6 +272,14 @@ export async function getTripSampleCount(baseUrl: string, token: string, tripId:
 
 export async function getWeather(baseUrl: string, token: string, lat: number, lon: number) {
   return request<WeatherPayload>(`/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, {
+    token,
+    baseUrl,
+    timeoutMs: 12000
+  });
+}
+
+export async function getTripTelemetry(baseUrl: string, token: string, tripId: string) {
+  return request<TripTelemetry>(`/trips/${tripId}/telemetry`, {
     token,
     baseUrl,
     timeoutMs: 12000

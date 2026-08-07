@@ -225,6 +225,34 @@ export type TripSampleCount = {
   count: number;
 };
 
+export type TripTelemetry = {
+  trip_id: string;
+  status: string;
+  started_at: string | null;
+  elapsed_s: number;
+  samples_uploaded: number;
+  latest: {
+    ts: string | null;
+    speed_mps: number | null;
+    lat: number | null;
+    lon: number | null;
+    accuracy_m: number | null;
+    accel_mag_mps2: number | null;
+    longitudinal_accel_mps2: number | null;
+  };
+  live_score: {
+    score: number;
+    risk_level: "low" | "medium" | "high";
+    penalties: Record<string, number>;
+    density_penalty: number;
+    provisional: boolean;
+    scoring_version: string;
+  };
+  event_counts: Record<string, number>;
+  event_total: number;
+  recent_alerts: LiveAlertMessage[];
+};
+
 export type WeatherCurrent = {
   ts: string | null;
   temp_c: number | null;

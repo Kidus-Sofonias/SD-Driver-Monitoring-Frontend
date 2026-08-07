@@ -5,10 +5,11 @@ import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
-import { formatDateTime, formatDurationSince, formatTimeAgo, titleCase } from "../lib/format";
+import { formatDateTime, formatTimeAgo, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { fontFamily, radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
+import { LiveTripMonitor } from "./LiveTripMonitor";
 
 type Props = {
   onOpenResults: () => void;
@@ -51,10 +52,8 @@ export function DriveScreen({ onOpenResults }: Props) {
     activeTrip,
     busy,
     bufferedSampleCount,
-    captureMode,
     dismissLiveAlert,
     endTrip,
-    error,
     finalizeTrip,
     latestResult,
     liveAlerts,
@@ -63,11 +62,6 @@ export function DriveScreen({ onOpenResults }: Props) {
     uploadSensorBatch,
     uploadedBurstCount,
   } = useApp();
-  const hasUploadIssues = !!error && !!activeTrip;
-  const uploadSummary =
-    uploadedBurstCount > 0 || bufferedSampleCount > 0
-      ? `${uploadedBurstCount} \u2191 \u00b7 ${bufferedSampleCount} ${t("samples_queued").toLowerCase()}`
-      : t("uploading_live_samples");
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -120,66 +114,11 @@ export function DriveScreen({ onOpenResults }: Props) {
           })}
         </View>
       ) : null}
-      <Card>
-        {activeTrip ? (
-          <>
-            <StatusPill label={t("trip_in_progress")} tone="good" />
-            <Text style={[styles.elapsed, { color: colors.heading }]}>
-              {formatDurationSince(activeTrip.started_at)}
-            </Text>
-            <View style={styles.compactRow}>
-              {[
-                <View key="s1" style={styles.stat}>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{uploadedBurstCount}</Text>
-                  <Text style={[styles.statLabel, { color: colors.muted }]}>{t("samples_uploaded")}</Text>
-                </View>,
-                divider1,
-                <View key="s2" style={styles.stat}>
-                  <Text style={[styles.statValue, { color: colors.text }]}>{bufferedSampleCount}</Text>
-                  <Text style={[styles.statLabel, { color: colors.muted }]}>{t("samples_queued")}</Text>
-                </View>,
-                divider2,
-                <View key="s3" style={styles.stat}>
-                  <Text style={[styles.statValue, styles.statValueSmall, { color: colors.accentStrong }]}>
-                    {titleCase(captureMode)}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: colors.muted }]}>{t("sync_status")}</Text>
-                </View>,
-              ]}
-            </View>
-            <View style={styles.metaRow}>
-              <Text style={[styles.metaText, { color: colors.muted }]} numberOfLines={1}>
-                {t("started")} {formatDateTime(activeTrip.started_at)}
-              </Text>
-              {hasUploadIssues ? (
-                <Text
-                  style={[styles.metaText, { color: colors.danger, flexShrink: 1 }]}
-                  numberOfLines={2}
-                >
-                  {error}
-                </Text>
-              ) : (
-                <Text style={[styles.metaText, { color: colors.muted }]} numberOfLines={1}>
-                  {'\u00b7'} {uploadSummary}
-                </Text>
-              )}
-            </View>
-            <View style={styles.actions}>
-              <PrimaryButton
-                label={t("sync_sensor_batch")}
-                onPress={uploadSensorBatch}
-                loading={busy}
-                variant="secondary"
-              />
-              <PrimaryButton
-                label={t("end_trip")}
-                onPress={endTrip}
-                loading={busy}
-                variant="danger"
-              />
-            </View>
-          </>
-        ) : pendingFinalizeTrip ? (
+      {activeTrip ? (
+        <LiveTripMonitor onSync={uploadSensorBatch} onEndTrip={endTrip} busy={busy} />
+      ) : (
+        <Card>
+          {pendingFinalizeTrip ? (
           <>
             <StatusPill label={t("trip_ended")} tone="warn" />
             <View style={styles.compactRow}>
@@ -208,7 +147,8 @@ export function DriveScreen({ onOpenResults }: Props) {
             <PrimaryButton label={t("start_trip")} onPress={startTrip} loading={busy} />
           </>
         )}
-      </Card>
+        </Card>
+      )}
       {latestResult ? (
         <Card>
           <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("latest_finalized_trip")}</Text>

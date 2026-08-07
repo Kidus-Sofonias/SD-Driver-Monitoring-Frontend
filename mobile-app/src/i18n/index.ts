@@ -212,7 +212,27 @@ type TranslationKey =
   | "alert_aggressive_turn"
   | "alert_overspeed"
   | "alert_severe_overspeed"
-  | "alert_unstable_motion";
+  | "alert_unstable_motion"
+  | "glance_mode"
+  | "details_mode"
+  | "current_speed"
+  | "live_score"
+  | "live_telemetry"
+  | "event_timeline"
+  | "weather"
+  | "forecast"
+  | "acceleration"
+  | "location"
+  | "no_gps_fix"
+  | "stale_weather"
+  | "queue_capped"
+  | "offline_queued"
+  | "map_and_route"
+  | "provisional_score"
+  | "event_counters"
+  | "trip_stats"
+  | "distance_km"
+  | "no_events_yet";
 
 const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -426,6 +446,26 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     alert_overspeed: "Overspeeding detected",
     alert_severe_overspeed: "Severe overspeeding detected",
     alert_unstable_motion: "Unstable motion / rough road",
+    glance_mode: "Glance",
+    details_mode: "Details",
+    current_speed: "Current speed",
+    live_score: "Live score",
+    live_telemetry: "Live telemetry",
+    event_timeline: "Event timeline",
+    weather: "Weather",
+    forecast: "Forecast",
+    acceleration: "Acceleration",
+    location: "Location",
+    no_gps_fix: "Waiting for GPS fix",
+    stale_weather: "Weather may be slightly outdated",
+    queue_capped: "{dropped} oldest samples dropped — queue is full",
+    offline_queued: "{count} saved offline",
+    map_and_route: "Map & route",
+    provisional_score: "Provisional — updates live, final score at end",
+    event_counters: "Event counters",
+    trip_stats: "Trip stats",
+    distance_km: "Distance",
+    no_events_yet: "No events detected yet",
   },
   am: {
     home: "መነሻ",
@@ -638,6 +678,26 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     alert_overspeed: "ከመጠን በላይ ፍጥነት ተገኝቷል",
     alert_severe_overspeed: "እጅግ ከፍተኛ ፍጥነት ተገኝቷል",
     alert_unstable_motion: "ያልተረጋጋ እንቅስቃሴ / ሻካራ መንገድ",
+    glance_mode: "ፈጣን እይታ",
+    details_mode: "ዝርዝር",
+    current_speed: "የአሁኑ ፍጥነት",
+    live_score: "የቀጥታ ነጥብ",
+    live_telemetry: "የቀጥታ ቴሌሜትሪ",
+    event_timeline: "የክስተት ጊዜ መስመር",
+    weather: "አየር ሁኔታ",
+    forecast: "ትንበያ",
+    acceleration: "ፍጥነት መጨመር",
+    location: "ቦታ",
+    no_gps_fix: "ጂፒኤስ በመጠባበቅ ላይ",
+    stale_weather: "የአየር ሁኔታ ትንሽ ያረጀ ሊሆን ይችላል",
+    queue_capped: "{dropped} የቆዩ ሳምፕሎች ተጣሉ — ወረፋ ሞልቷል",
+    offline_queued: "{count} ከመስመር ውጭ ተቀምጠዋል",
+    map_and_route: "ካርታ እና መንገድ",
+    provisional_score: "ጊዜያዊ — በቀጥታ ይዘምናል፣ የመጨረሻ ነጥብ መጨረሻ ላይ",
+    event_counters: "የክስተት ቆጣሪዎች",
+    trip_stats: "የጉዞ ስታቲስቲክስ",
+    distance_km: "ርቀት",
+    no_events_yet: "እስካሁን ክስተቶች አልተገኙም",
   },
   om: {
     home: "Mana",
@@ -850,6 +910,26 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     alert_overspeed: "Saffisni ol'aanaa hubatame",
     alert_severe_overspeed: "Saffisni baay'ee ol'aanaa hubatame",
     alert_unstable_motion: "Sochiin tasgabbaa'aa hin taane / karaan cime",
+    glance_mode: "Ilaalcha ariifataa",
+    details_mode: "Ibsa",
+    current_speed: "Saffisa ammaa",
+    live_score: "Qabxii yeroo dhugaa",
+    live_telemetry: "Telemeterii yeroo dhugaa",
+    event_timeline: "Yeroo taateewwanii",
+    weather: "Haala qilleensaa",
+    forecast: "Raagaya",
+    acceleration: "Saffisaa dabaluu",
+    location: "Iddoo",
+    no_gps_fix: "GPS eeggachaa jira",
+    stale_weather: "Haalli qilleensaa xiqqoo dulloomee ta'uu danda'a",
+    queue_capped: "Sampileen dheeraan {dropped} darban — tarree guutee jira",
+    offline_queued: "{count} offline kuusaman",
+    map_and_route: "Maapii fi daandii",
+    provisional_score: "Yeroo fedhe — yeroo dhugaan haaroma, qabxii xumuraa dhuma irratti",
+    event_counters: "Lakkoofsota taateewwanii",
+    trip_stats: "Tilmaama imalaa",
+    distance_km: "Fageenya",
+    no_events_yet: "Hanga ammaatti taateewwan hin argamne",
   },
 };
 
