@@ -1,4 +1,5 @@
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { AppState as RNAppState } from "react-native";
 
 import { DEFAULT_API_BASE_URL, normalizeApiBaseUrl, normalizeConfiguredApiBaseUrl } from "../config/constants";
 import type { LanguageMode } from "../i18n";
@@ -17,6 +18,15 @@ import {
   saveThemeMode
 } from "../lib/storage";
 import { createPhoneSensorCollector, generateMockSensorBurst, type SensorCaptureMode } from "../services/sensorCapture";
+import {
+  clearTripQueue,
+  dequeueSamples,
+  enqueueSamples,
+  listQueuedTripIds,
+  peekSamples,
+  queueDepth,
+  clearAllQueued
+} from "../lib/uploadQueue";
 import type { AdminDriver, DriverInsights, FinalizeTrip, LiveAlertMessage, ReviewDashboardItem, ReviewTrip, Session, Trip, TripDetail, TripRoute } from "../types/api";
 
 type AppState = {
@@ -41,6 +51,10 @@ type AppState = {
   healthLabel: string;
   captureMode: SensorCaptureMode;
   bufferedSampleCount: number;
+  /** Samples sitting in the durable outbox (drained but not yet on the server). */
+  persistedQueuedCount: number;
+  /** Samples dropped from the outbox because it hit its cap (oldest-first). */
+  queueDroppedCount: number;
   uploadedBurstCount: number;
   lastUploadAt: string | null;
   dismissedPendingTripIds: string[];
@@ -80,8 +94,9 @@ const EMPTY_TRIP_FINALIZE_MESSAGE = "Not enough samples collected. Trip can't be
 const COLLECTOR_SNAPSHOT_INTERVAL_MS = 1000;
 const AUTO_UPLOAD_INTERVAL_MS = 4000;
 const AUTO_UPLOAD_MIN_BUFFERED_SAMPLES = 4;
-const UPLOAD_BACKOFF_INITIAL_MS = 5000;
-const UPLOAD_BACKOFF_MAX_MS = 30000;
+const UPLOAD_BACKOFF_INITIAL_MS = 4000;
+const UPLOAD_BACKOFF_MAX_MS = 120000;
+const UPLOAD_BATCH_MAX = 200;
 const UPLOAD_FAILURE_ERROR_THRESHOLD = 2;
 const ALERT_SOCKET_RECONNECT_MS = 6000;
 const LIVE_ALERT_DISPLAY_MS = 6000;
@@ -217,6 +232,8 @@ export function AppProvider({ children }: PropsWithChildren) {
     healthLabel: "Backend not checked",
     captureMode: "idle",
     bufferedSampleCount: 0,
+    persistedQueuedCount: 0,
+    queueDroppedCount: 0,
     uploadedBurstCount: 0,
     lastUploadAt: null,
     dismissedPendingTripIds: [],
@@ -268,55 +285,59 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void bootstrap();
-  }, []);
+  }, []);      // Lightweight interval: only do minimal work when no trip is active.
+      // Heavier upload logic only fires when an active trip exists.
+      useEffect(() => {
+        let tickCount = 0;
+        const timer = setInterval(() => {
+          const current = stateRef.current;
 
-  // Lightweight interval: only do minimal work when no trip is active.
-  // Heavier upload logic only fires when an active trip exists.
-  useEffect(() => {
-    let tickCount = 0;
-    const timer = setInterval(() => {
-      const current = stateRef.current;
-
-      // No session at all — skip everything
-      if (!current.session) {
-        return;
-      }
-
-      tickCount++;
-
-      if (!current.activeTrip) {
-        // Only check snapshot every 3 ticks to reduce load
-        if (tickCount % 3 !== 0) {
-          return;
-        }
-        const snapshot = collectorRef.current.snapshot();
-        setState((prev) => {
-          if (prev.captureMode === snapshot.mode && prev.bufferedSampleCount === snapshot.bufferedCount) {
-            return prev;
+          // No session at all — skip everything
+          if (!current.session) {
+            return;
           }
-          return { ...prev, captureMode: snapshot.mode, bufferedSampleCount: snapshot.bufferedCount };
-        });
-        return;
-      }
 
-      if (autoUploadInFlightRef.current) {
-        return;
-      }
+          tickCount++;
 
-      const snapshot = collectorRef.current.snapshot();
+          if (!current.activeTrip) {
+            // Only check snapshot every 3 ticks to reduce load
+            if (tickCount % 3 !== 0) {
+              return;
+            }
+            const snapshot = collectorRef.current.snapshot();
+            setState((prev) => {
+              if (prev.captureMode === snapshot.mode && prev.bufferedSampleCount === snapshot.bufferedCount) {
+                return prev;
+              }
+              return { ...prev, captureMode: snapshot.mode, bufferedSampleCount: snapshot.bufferedCount };
+            });
+            return;
+          }
 
-      setState((current) => {
-        if (current.captureMode === snapshot.mode && current.bufferedSampleCount === snapshot.bufferedCount) {
-          return current;
-        }
-        return {
-          ...current,
-          captureMode: snapshot.mode,
-          bufferedSampleCount: snapshot.bufferedCount,
-        };
-      });
+          if (autoUploadInFlightRef.current) {
+            return;
+          }
 
-      const now = Date.now();
+          const snapshot = collectorRef.current.snapshot();
+
+          setState((current) => {
+            if (current.captureMode === snapshot.mode && current.bufferedSampleCount === snapshot.bufferedCount) {
+              return current;
+            }
+            return {
+              ...current,
+              captureMode: snapshot.mode,
+              bufferedSampleCount: snapshot.bufferedCount,
+            };
+          });
+
+          // Keep the durable-outbox count in sync with reality a few times a
+          // minute even when no upload attempt fires.
+          if (tickCount % 5 === 0) {
+            void refreshPersistedQueueCounts(current.activeTrip.id);
+          }
+
+          const now = Date.now();
 
       // Respect upload backoff: if we've been failing, don't retry until cooldown expires
       if (now < nextUploadRetryAtRef.current) {
@@ -411,6 +432,25 @@ export function AppProvider({ children }: PropsWithChildren) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.session?.token.access_token, state.activeTrip?.id, state.activeTrip?.status]);
+
+  // Remote-area resilience: when the app returns to the foreground mid-trip,
+  // flush the outbox immediately instead of waiting for the next tick (the
+  // backoff gate still applies so we don't hammer a still-dead link).
+  useEffect(() => {
+    const subscription = RNAppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        return;
+      }
+      const current = stateRef.current;
+      if (!current.session || !current.activeTrip || autoUploadInFlightRef.current) {
+        return;
+      }
+      if (Date.now() >= nextUploadRetryAtRef.current) {
+        void uploadPendingSamples({ background: true, suppressEmptyError: true });
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   function dismissLiveAlert(id: string) {
     const timer = alertDismissTimersRef.current.get(id);
@@ -635,6 +675,8 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   async function signOut() {
     await collectorRef.current.stop();
+    // Never let queued samples cross accounts.
+    await clearAllQueued();
     await saveSession(null);
     setState((current) => ({
       ...current,
@@ -654,6 +696,8 @@ export function AppProvider({ children }: PropsWithChildren) {
       selectedAdminDriverInsights: null,
       captureMode: "idle",
       bufferedSampleCount: 0,
+      persistedQueuedCount: 0,
+      queueDroppedCount: 0,
       uploadedBurstCount: 0,
       lastUploadAt: null,
       liveAlerts: []
@@ -716,6 +760,8 @@ export function AppProvider({ children }: PropsWithChildren) {
           dismissedPendingTripIds: current.dismissedPendingTripIds.filter((id) => id !== trip.id),
           captureMode: collectorSnapshot.mode,
           bufferedSampleCount: collectorSnapshot.bufferedCount,
+          persistedQueuedCount: 0,
+          queueDroppedCount: 0,
           uploadedBurstCount: 0,
           lastUploadAt: null
         }));
@@ -731,78 +777,120 @@ export function AppProvider({ children }: PropsWithChildren) {
     });
   }
 
+  async function refreshPersistedQueueCounts(tripId: string | null) {
+    const depth = tripId ? await queueDepth(tripId) : 0;
+    const snapshot = collectorRef.current.snapshot();
+    setState((prev) => {
+      if (prev.persistedQueuedCount === depth && prev.bufferedSampleCount === snapshot.bufferedCount && prev.captureMode === snapshot.mode) {
+        return prev;
+      }
+      return {
+        ...prev,
+        captureMode: snapshot.mode,
+        bufferedSampleCount: snapshot.bufferedCount,
+        persistedQueuedCount: depth,
+      };
+    });
+  }
+
+  function applyUploadBackoff() {
+    consecutiveUploadFailuresRef.current += 1;
+    const exponent = Math.max(0, consecutiveUploadFailuresRef.current - 1);
+    const base = Math.min(UPLOAD_BACKOFF_INITIAL_MS * Math.pow(2, exponent), UPLOAD_BACKOFF_MAX_MS);
+    // Jitter ±25% so many devices regaining signal don't stampede the server.
+    const jitter = 0.75 + Math.random() * 0.5;
+    nextUploadRetryAtRef.current = Date.now() + Math.max(base * jitter, UPLOAD_BACKOFF_INITIAL_MS);
+  }
+
   async function uploadPendingSamples(options?: {
     background?: boolean;
     suppressEmptyError?: boolean;
+    /** When set, flushes this trip's outbox even if it is no longer the active trip. */
+    tripId?: string;
   }) {
     const current = stateRef.current;
-    if (!current.session || !current.activeTrip || autoUploadInFlightRef.current) {
+    const token = current.session?.token.access_token;
+    if (!token || autoUploadInFlightRef.current) {
+      return 0;
+    }
+    const tripId = options?.tripId ?? current.activeTrip?.id;
+    if (!tripId) {
       return 0;
     }
 
     autoUploadInFlightRef.current = true;
-    const preDrainSnapshot = collectorRef.current.snapshot();
-    // On web, the collector may be in "idle" mode after a stop(). Treat idle the same
-    // as demo for fallback so we always have samples to upload during browser demos.
-    const allowDemoFallback = preDrainSnapshot.mode === "demo" || preDrainSnapshot.mode === "idle";
-    const samples = collectorRef.current.drainSamples({ fallbackToDemo: allowDemoFallback });
-    const drainedSnapshot = collectorRef.current.snapshot();
-
-    setState((prev) => ({
-      ...prev,
-      captureMode: drainedSnapshot.mode,
-      bufferedSampleCount: drainedSnapshot.bufferedCount,
-    }));
-
-    if (!samples.length) {
-      autoUploadInFlightRef.current = false;
-      if (!options?.suppressEmptyError) {
-        throw new Error(
-          preDrainSnapshot.mode === "demo" || preDrainSnapshot.mode === "idle"
-            ? "No demo samples available yet. Try syncing again."
-            : "Waiting for the first live sensor samples."
-        );
-      }
-      return 0;
-    }
-
     try {
+      const preDrainSnapshot = collectorRef.current.snapshot();
+      const isActiveTrip = current.activeTrip?.id === tripId;
+
+      // Durability first: move anything the collector has into the persistent
+      // outbox BEFORE touching the network, so a killed app or dropped signal
+      // never loses drained samples (rural/remote areas).
+      if (isActiveTrip) {
+        const allowDemoFallback = preDrainSnapshot.mode === "demo" || preDrainSnapshot.mode === "idle";
+        const drained = collectorRef.current.drainSamples({ fallbackToDemo: allowDemoFallback });
+        if (drained.length > 0) {
+          const { dropped } = await enqueueSamples(tripId, drained);
+          if (dropped > 0) {
+            setState((prev) => ({ ...prev, queueDroppedCount: prev.queueDroppedCount + dropped }));
+          }
+        }
+      }
+
+      // Pull a bounded batch from the outbox and try to send it.
+      const batch = await peekSamples(tripId, UPLOAD_BATCH_MAX);
+      if (!batch.length) {
+        const snapshot = collectorRef.current.snapshot();
+        setState((prev) => ({
+          ...prev,
+          captureMode: snapshot.mode,
+          bufferedSampleCount: snapshot.bufferedCount,
+          persistedQueuedCount: 0,
+        }));
+        if (!options?.suppressEmptyError) {
+          throw new Error(
+            preDrainSnapshot.mode === "demo" || preDrainSnapshot.mode === "idle"
+              ? "No demo samples available yet. Try syncing again."
+              : "Waiting for the first live sensor samples."
+          );
+        }
+        return 0;
+      }
+
       const uploadResult = await api.uploadSamples(
         current.apiBaseUrl,
-        current.session.token.access_token,
-        current.activeTrip.id,
-        samples
+        token,
+        tripId,
+        batch
       );
+      await dequeueSamples(tripId, batch.length);
 
-      // Success — reset failure tracking so backoff clears
+      // Success — reset failure tracking so backoff clears.
       consecutiveUploadFailuresRef.current = 0;
       nextUploadRetryAtRef.current = 0;
 
       const collectorSnapshot = collectorRef.current.snapshot();
+      const depth = await queueDepth(tripId);
       setState((prev) => ({
         ...prev,
         captureMode: collectorSnapshot.mode,
         bufferedSampleCount: collectorSnapshot.bufferedCount,
+        persistedQueuedCount: depth,
         uploadedBurstCount: prev.uploadedBurstCount + uploadResult.inserted,
         lastUploadAt: new Date().toISOString(),
         error: null, // Clear stale error on successful upload
       }));
       return uploadResult.inserted;
     } catch (error) {
-      const restoredSnapshot = collectorRef.current.restoreSamples(samples);
-
-      // Backoff: increase wait time on each consecutive failure
-      consecutiveUploadFailuresRef.current += 1;
-      const backoffMs = Math.min(
-        UPLOAD_BACKOFF_INITIAL_MS * Math.pow(2, consecutiveUploadFailuresRef.current - 2),
-        UPLOAD_BACKOFF_MAX_MS
-      );
-      nextUploadRetryAtRef.current = Date.now() + Math.max(backoffMs, UPLOAD_BACKOFF_INITIAL_MS);
-
+      // Samples stay safely in the outbox; the loop retries with backoff.
+      applyUploadBackoff();
+      const snapshot = collectorRef.current.snapshot();
+      const depth = await queueDepth(tripId);
       setState((prev) => ({
         ...prev,
-        captureMode: restoredSnapshot.mode,
-        bufferedSampleCount: restoredSnapshot.bufferedCount,
+        captureMode: snapshot.mode,
+        bufferedSampleCount: snapshot.bufferedCount,
+        persistedQueuedCount: depth,
         // After N consecutive background failures, surface the error so the user can diagnose
         error: options?.background && consecutiveUploadFailuresRef.current < UPLOAD_FAILURE_ERROR_THRESHOLD
           ? prev.error
@@ -817,6 +905,28 @@ export function AppProvider({ children }: PropsWithChildren) {
     } finally {
       autoUploadInFlightRef.current = false;
     }
+  }
+
+  async function flushQueuedForTrip(tripId: string) {
+    // Best-effort flush of a specific trip's outbox (used by finalize so an
+    // offline-ended trip still delivers its last samples before scoring).
+    const token = stateRef.current.session?.token.access_token;
+    if (!token) {
+      return;
+    }
+    const depth = await queueDepth(tripId);
+    if (depth <= 0) {
+      return;
+    }
+    const batch = await peekSamples(tripId, depth);
+    const result = await api.uploadSamples(stateRef.current.apiBaseUrl, token, tripId, batch);
+    await dequeueSamples(tripId, batch.length);
+    const remaining = await queueDepth(tripId);
+    setState((prev) => ({
+      ...prev,
+      persistedQueuedCount: remaining,
+      uploadedBurstCount: prev.uploadedBurstCount + result.inserted,
+    }));
   }
 
   async function uploadSensorBatch() {
@@ -881,6 +991,10 @@ export function AppProvider({ children }: PropsWithChildren) {
     await runBusy(async () => {
       const tripToFinalize = state.pendingFinalizeTrip || state.activeTrip;
       await uploadPendingSamples({ suppressEmptyError: true });
+      // Remote-area resilience: deliver anything still in this trip's durable
+      // outbox (e.g. an offline-ended trip) before we score it. The backend
+      // accepts uploads for completed-but-unfinalized trips.
+      await flushQueuedForTrip(tripToFinalize!.id);
       const serverSampleCount = (await api.getTripSampleCount(
         state.apiBaseUrl,
         state.session!.token.access_token,

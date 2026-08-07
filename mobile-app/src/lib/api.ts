@@ -16,7 +16,8 @@ import type {
   TripSampleCount,
   Trip,
   User,
-  LiveAlertMessage
+  LiveAlertMessage,
+  WeatherPayload
 } from "../types/api";
 
 type RequestOptions = {
@@ -25,6 +26,12 @@ type RequestOptions = {
   token?: string;
   baseUrl?: string;
   timeoutMs?: number;
+  /**
+   * Skip the multi-candidate base-URL fallback and try only the configured
+   * URL. Used for high-frequency uploads on flaky connections (rural areas)
+   * where probing every candidate would block the queue for minutes.
+   */
+  singleCandidate?: boolean;
 };
 
 const REQUEST_TIMEOUT_MS = 30000;
@@ -106,8 +113,8 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, token, baseUrl = DEFAULT_API_BASE_URL, timeoutMs = REQUEST_TIMEOUT_MS } = options;
-  const candidateBaseUrls = getCandidateBaseUrls(baseUrl);
+  const { method = "GET", body, token, baseUrl = DEFAULT_API_BASE_URL, timeoutMs = REQUEST_TIMEOUT_MS, singleCandidate = false } = options;
+  const candidateBaseUrls = singleCandidate ? [getCandidateBaseUrls(baseUrl)[0]] : getCandidateBaseUrls(baseUrl);
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -228,6 +235,8 @@ export async function endTrip(baseUrl: string, token: string, tripId: string) {
   return request<Trip>(`/trips/${tripId}/end`, { method: "POST", token, baseUrl });
 }
 
+export const UPLOAD_TIMEOUT_MS = 12000;
+
 export async function uploadSamples(
   baseUrl: string,
   token: string,
@@ -238,7 +247,11 @@ export async function uploadSamples(
     method: "POST",
     body: { samples },
     token,
-    baseUrl
+    baseUrl,
+    // Fast-fail on rural connections: a short timeout plus a single candidate
+    // lets the outbox retry quickly instead of blocking on slow probes.
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+    singleCandidate: true
   });
 }
 
@@ -253,6 +266,14 @@ export async function getTripSampleCount(baseUrl: string, token: string, tripId:
   return request<TripSampleCount>(`/trips/${tripId}/samples/count`, {
     token,
     baseUrl
+  });
+}
+
+export async function getWeather(baseUrl: string, token: string, lat: number, lon: number) {
+  return request<WeatherPayload>(`/weather?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, {
+    token,
+    baseUrl,
+    timeoutMs: 12000
   });
 }
 

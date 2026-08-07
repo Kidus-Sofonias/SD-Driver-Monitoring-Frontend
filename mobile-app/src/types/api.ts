@@ -225,6 +225,37 @@ export type TripSampleCount = {
   count: number;
 };
 
+export type WeatherCurrent = {
+  ts: string | null;
+  temp_c: number | null;
+  apparent_temp_c: number | null;
+  humidity_pct: number | null;
+  precip_mm: number | null;
+  wind_kph: number | null;
+  weather_code: number | null;
+  weather_label: string | null;
+  is_day: number | null;
+};
+
+export type WeatherForecastDay = {
+  date: string;
+  code: number | null;
+  t_max_c: number | null;
+  t_min_c: number | null;
+  precip_prob_pct: number | null;
+};
+
+export type WeatherPayload = {
+  lat: number;
+  lon: number;
+  source: string;
+  timezone: string | null;
+  cached: boolean;
+  stale: boolean;
+  current: WeatherCurrent;
+  forecast: WeatherForecastDay[];
+};
+
 export type LiveAlertEvent = {
   event_type: string;
   value: number;
