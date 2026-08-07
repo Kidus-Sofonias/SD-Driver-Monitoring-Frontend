@@ -322,11 +322,26 @@ export type LiveAlertEvent = {
   lon?: number | null;
 };
 
+export type AccidentSignals = {
+  strong_impact: boolean;
+  speed_collapse: boolean;
+  no_movement: boolean;
+  repeated_impacts: boolean;
+};
+
 export type LiveAlertMessage = {
-  type: "connected" | "event_alert" | "ping";
+  type: "connected" | "event_alert" | "accident_alert" | "ping";
   trip_id?: string | null;
   event?: LiveAlertEvent | null;
   sent_at?: string | null;
+  // accident_alert fields
+  occurred_at?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  confidence?: number | null;
+  max_accel_mps2?: number | null;
+  speed_at_impact_mps?: number | null;
+  signals?: AccidentSignals | null;
 };
 
 export type Session = {

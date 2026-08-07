@@ -239,7 +239,9 @@ type TranslationKey =
   | "connection_live"
   | "connection_stale"
   | "connection_disconnected"
-  | "fleet_alerts";
+  | "fleet_alerts"
+  | "alert_accident"
+  | "accident_confidence";
 
 const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>> = {
   en: {
@@ -480,6 +482,8 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     connection_stale: "Stale",
     connection_disconnected: "Disconnected",
     fleet_alerts: "Fleet alerts",
+    alert_accident: "Possible accident detected",
+    accident_confidence: "Confidence {percent}",
   },
   am: {
     home: "መነሻ",
@@ -719,6 +723,8 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     connection_stale: "ያረጀ",
     connection_disconnected: "ተቋርጧል",
     fleet_alerts: "የመርከብ ማስጠንቀቂያዎች",
+    alert_accident: "የአደጋ ምልክት ተገኝቷል",
+    accident_confidence: "እምነት {percent}",
   },
   om: {
     home: "Mana",
@@ -958,6 +964,8 @@ const translations: Record<LanguageMode, Partial<Record<TranslationKey, string>>
     connection_stale: "Dulloome",
     connection_disconnected: "Citatte",
     fleet_alerts: "Akeekkaa fleet",
+    alert_accident: "Adeemsi balaan ta'uu danda'ee hubatame",
+    accident_confidence: "Amanamummaa {percent}",
   },
 };
 

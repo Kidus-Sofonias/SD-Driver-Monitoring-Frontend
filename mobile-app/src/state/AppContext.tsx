@@ -398,7 +398,10 @@ export function AppProvider({ children }: PropsWithChildren) {
         baseUrl,
         accessToken,
         (message) => {
-          if (message.type !== "event_alert" || !message.event) {
+          if (message.type !== "event_alert" && message.type !== "accident_alert") {
+            return;
+          }
+          if (message.type === "event_alert" && !message.event) {
             return;
           }
           const seq = ++liveAlertSeqRef.current;

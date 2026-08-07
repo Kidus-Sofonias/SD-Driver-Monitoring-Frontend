@@ -80,7 +80,21 @@ export function DriveScreen({ onOpenResults }: Props) {
           <Text style={[styles.alertEyebrow, { color: colors.muted }]}>{t("live_alerts")}</Text>
           {visibleAlerts.map((item) => {
             const event = item.message.event;
-            const isEmergency = event?.event_type === "emergency_brake" || event?.event_type === "severe_overspeed";
+            const isAccident = item.message.type === "accident_alert";
+            const isEmergency =
+              isAccident ||
+              event?.event_type === "emergency_brake" ||
+              event?.event_type === "severe_overspeed";
+            const title = isAccident
+              ? t("alert_accident")
+              : t(alertLabelKey(event?.event_type || "hard_brake"));
+            const value = isAccident
+              ? item.message.confidence != null
+                ? `${Math.round(item.message.confidence * 100)}%`
+                : ""
+              : event
+                ? `${Math.abs(event.value).toFixed(1)}`
+                : "";
             return (
               <Pressable
                 key={item.id}
@@ -102,12 +116,12 @@ export function DriveScreen({ onOpenResults }: Props) {
                     ]}
                     numberOfLines={2}
                   >
-                    {t(alertLabelKey(event?.event_type || "hard_brake"))}
+                    {title}
                   </Text>
                   <Text style={[styles.alertMeta, { color: colors.muted }]}>{"\u00b7"} {formatTimeAgo(item.message.sent_at)}</Text>
                 </View>
                 <Text style={[styles.alertValue, { color: colors.muted }]}>
-                  {event ? `${Math.abs(event.value).toFixed(1)}` : ""}
+                  {value}
                 </Text>
               </Pressable>
             );

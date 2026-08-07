@@ -259,11 +259,18 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
             <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("fleet_alerts")}</Text>
             {liveAlerts.slice(0, 4).map((item) => {
               const event = item.message.event;
+              const isAccident = item.message.type === "accident_alert";
+              const label = isAccident
+                ? t("alert_accident")
+                : event
+                  ? event.event_type.replace(/_/g, " ")
+                  : "alert";
               return (
-                <View key={item.id} style={[styles.alertRow, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
-                  <View style={[styles.alertDot, { backgroundColor: event?.event_type === "emergency_brake" ? colors.highRisk : colors.accentStrong }]} />
-                  <Text style={[styles.driverSubtle, { color: colors.heading }]} numberOfLines={1}>
-                    {(item.message.trip_id ?? "").slice(0, 8)} · {event ? event.event_type.replace(/_/g, " ") : "alert"}
+                <View key={item.id} style={[styles.alertRow, { backgroundColor: isAccident ? "#3D1418" : colors.panelRaised, borderColor: isAccident ? "#8A2B31" : colors.line }]}>
+                  <View style={[styles.alertDot, { backgroundColor: isAccident || event?.event_type === "emergency_brake" ? colors.highRisk : colors.accentStrong }]} />
+                  <Text style={[styles.driverSubtle, { color: isAccident ? "#FFE3E5" : colors.heading }]} numberOfLines={1}>
+                    {(item.message.trip_id ?? "").slice(0, 8)} · {label}
+                    {isAccident && item.message.confidence != null ? ` · ${Math.round(item.message.confidence * 100)}%` : ""}
                   </Text>
                 </View>
               );
