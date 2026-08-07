@@ -291,6 +291,7 @@ export function AdminDashboardScreen({ onOpenReview, onOpenTrip }: Props) {
                   <View style={styles.statRow}>
                     <StatusPill label={`${trip.score ?? "--"}`} tone="neutral" />
                     <StatusPill label={titleCase(trip.risk_level || "unknown")} tone={trip.risk_level === "low" ? "good" : trip.risk_level === "medium" ? "warn" : "bad"} />
+                    <StatusPill label={`${t("model_influence")} ${formatPercent(trip.ml_blend_weight)}`} tone="neutral" />
                   </View>
                 </View>
               </Pressable>

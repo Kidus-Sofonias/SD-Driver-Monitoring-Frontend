@@ -78,6 +78,9 @@ const EMPTY_TRIP_FINALIZE_MESSAGE = "Not enough samples collected. Trip can't be
 const COLLECTOR_SNAPSHOT_INTERVAL_MS = 1000;
 const AUTO_UPLOAD_INTERVAL_MS = 4000;
 const AUTO_UPLOAD_MIN_BUFFERED_SAMPLES = 4;
+const UPLOAD_BACKOFF_INITIAL_MS = 5000;
+const UPLOAD_BACKOFF_MAX_MS = 30000;
+const UPLOAD_FAILURE_ERROR_THRESHOLD = 2;
 
 function pickPendingFinalizeTrip(trips: Trip[], dismissedPendingTripIds: string[]) {
   return (
@@ -185,6 +188,8 @@ export function AppProvider({ children }: PropsWithChildren) {
   const collectorRef = useRef(createPhoneSensorCollector());
   const autoUploadInFlightRef = useRef(false);
   const lastAutoUploadAttemptAtRef = useRef(0);
+  const consecutiveUploadFailuresRef = useRef(0);
+  const nextUploadRetryAtRef = useRef(0);
   const [state, setState] = useState<AppState>({
     booting: true,
     busy: false,
@@ -287,11 +292,13 @@ export function AppProvider({ children }: PropsWithChildren) {
         };
       });
 
-      if (snapshot.bufferedCount <= 0) {
+      const now = Date.now();
+
+      // Respect upload backoff: if we've been failing, don't retry until cooldown expires
+      if (now < nextUploadRetryAtRef.current) {
         return;
       }
 
-      const now = Date.now();
       const shouldUpload =
         snapshot.bufferedCount >= AUTO_UPLOAD_MIN_BUFFERED_SAMPLES ||
         now - lastAutoUploadAttemptAtRef.current >= AUTO_UPLOAD_INTERVAL_MS;
@@ -601,6 +608,8 @@ export function AppProvider({ children }: PropsWithChildren) {
           lastUploadAt: null
         }));
         lastAutoUploadAttemptAtRef.current = 0;
+        consecutiveUploadFailuresRef.current = 0;
+        nextUploadRetryAtRef.current = 0;
         void saveDismissedPendingTripIds(state.dismissedPendingTripIds.filter((id) => id !== trip.id));
         await refreshAllInternal(state.apiBaseUrl, state.session as Session);
       } catch (error) {
@@ -652,6 +661,11 @@ export function AppProvider({ children }: PropsWithChildren) {
         current.activeTrip.id,
         samples
       );
+
+      // Success — reset failure tracking so backoff clears
+      consecutiveUploadFailuresRef.current = 0;
+      nextUploadRetryAtRef.current = 0;
+
       const collectorSnapshot = collectorRef.current.snapshot();
       setState((prev) => ({
         ...prev,
@@ -659,15 +673,28 @@ export function AppProvider({ children }: PropsWithChildren) {
         bufferedSampleCount: collectorSnapshot.bufferedCount,
         uploadedBurstCount: prev.uploadedBurstCount + uploadResult.inserted,
         lastUploadAt: new Date().toISOString(),
+        error: null, // Clear stale error on successful upload
       }));
       return uploadResult.inserted;
     } catch (error) {
       const restoredSnapshot = collectorRef.current.restoreSamples(samples);
+
+      // Backoff: increase wait time on each consecutive failure
+      consecutiveUploadFailuresRef.current += 1;
+      const backoffMs = Math.min(
+        UPLOAD_BACKOFF_INITIAL_MS * Math.pow(2, consecutiveUploadFailuresRef.current - 2),
+        UPLOAD_BACKOFF_MAX_MS
+      );
+      nextUploadRetryAtRef.current = Date.now() + Math.max(backoffMs, UPLOAD_BACKOFF_INITIAL_MS);
+
       setState((prev) => ({
         ...prev,
         captureMode: restoredSnapshot.mode,
         bufferedSampleCount: restoredSnapshot.bufferedCount,
-        error: options?.background ? prev.error : getErrorMessage(error),
+        // After N consecutive background failures, surface the error so the user can diagnose
+        error: options?.background && consecutiveUploadFailuresRef.current < UPLOAD_FAILURE_ERROR_THRESHOLD
+          ? prev.error
+          : getErrorMessage(error),
       }));
 
       if (!options?.background) {

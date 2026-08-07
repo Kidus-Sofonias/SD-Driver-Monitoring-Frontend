@@ -108,4 +108,4 @@ export const SAMPLE_BURST_SIZE = 50;
 export const SAMPLE_BURST_SECONDS = 20;
 export const SENSOR_GPS_INTERVAL_MS = 500;
 export const SENSOR_MOTION_INTERVAL_MS = 200;
-export const SENSOR_DISTANCE_INTERVAL_M = 1;
+export const SENSOR_DISTANCE_INTERVAL_M = 0;

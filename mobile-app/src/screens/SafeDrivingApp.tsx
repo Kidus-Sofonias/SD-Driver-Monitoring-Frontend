@@ -339,7 +339,10 @@ export function SafeDrivingApp() {
         <View style={styles.pageContainer}>
           {pageError ? (
             <Pressable
-              style={[styles.errorBanner, { backgroundColor: "#FCE7E9", borderColor: "#F4C7CB" }]}
+              style={[
+                styles.errorBanner,
+                { backgroundColor: "#FCE7E9", borderColor: "#F4C7CB" },
+              ]}
               onPress={() => {
                 if (errorTimerRef.current) {
                   clearTimeout(errorTimerRef.current);
@@ -350,7 +353,13 @@ export function SafeDrivingApp() {
                 clearError();
               }}
             >
-              <Text style={[styles.errorText, { color: colors.highRisk }]}>{pageError}</Text>
+              <Text
+                style={[styles.errorText, { color: colors.highRisk }]}
+                numberOfLines={4}
+                ellipsizeMode="tail"
+              >
+                {pageError}
+              </Text>
             </Pressable>
           ) : null}
 
@@ -587,5 +596,8 @@ const styles = StyleSheet.create({
     fontSize: type.caption,
     fontWeight: "700",
     fontFamily: fontFamily.heading,
+    lineHeight: 16,
+    flexShrink: 1,
   },
+  // pageContainer already has alignSelf: "stretch" ensuring full width
 });

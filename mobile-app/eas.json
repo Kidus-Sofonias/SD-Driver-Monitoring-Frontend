@@ -4,6 +4,15 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "development": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://sd-backend-and-model.onrender.com/api/v1"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {

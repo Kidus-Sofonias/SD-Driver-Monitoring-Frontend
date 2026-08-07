@@ -5,7 +5,7 @@ import { Card } from "../components/Card";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusPill } from "../components/StatusPill";
 import { useI18n } from "../i18n";
-import { formatConfidence, formatDateTime, titleCase } from "../lib/format";
+import { formatConfidence, formatDateTime, formatPercent, titleCase } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { fontFamily, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -59,7 +59,7 @@ export function ReviewScreen({ onOpenTripDetail }: Props) {
               </View>
               <View style={styles.metaRow}>
                 <Text style={[styles.meta, { color: colors.text }]}>
-                  {`${t("today_score")} ${item.score ?? "--"} | ${t("confidence")} ${formatConfidence(item.confidence)}`}
+                  {`${t("today_score")} ${item.score ?? "--"} | ${t("confidence")} ${formatConfidence(item.confidence)} | ${t("model_influence")} ${formatPercent(item.ml_blend_weight)}`}
                 </Text>
                 <PrimaryButton label={t("open_trip_results")} onPress={() => void onOpenTripDetail(item.trip_id)} variant="secondary" />
               </View>

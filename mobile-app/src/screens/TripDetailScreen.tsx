@@ -173,6 +173,7 @@ export function TripDetailScreen({ onBack }: Props) {
           <View style={[styles.metricsRow, !isWide ? styles.metricsStack : null]}>
             <MetricTile label={t("rule_score")} value={"rule_score" in detail ? detail.rule_score?.toString() || "--" : "--"} />
             <MetricTile label={t("predicted_label")} value={"predicted_label" in detail ? detail.predicted_label?.toString() || "--" : "--"} />
+            <MetricTile label={t("model_influence")} value={formatPercent(detail.ml_blend_weight)} />
             <MetricTile label={t("events_label")} value={detail.events.length.toString()} />
           </View>
 

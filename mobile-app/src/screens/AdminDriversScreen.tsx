@@ -151,19 +151,19 @@ export function AdminDriversScreen({ onOpenDriver }: Props) {
                       <View style={styles.iconRow}>
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel={`Edit ${driver.email}`}
+                          accessibilityLabel={`${t("edit")} ${driver.email}`}
                           onPress={(e) => { e.stopPropagation(); openEdit(driver); }}
                           style={[styles.iconButton, { borderColor: colors.accentStrong, backgroundColor: colors.accent }]}
                         >
-                          <Text style={[styles.iconLabel, { color: colors.accentStrong }]}>Edit</Text>
+                          <Text style={[styles.iconLabel, { color: colors.accentStrong }]}>{t("edit")}</Text>
                         </Pressable>
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel={`Delete ${driver.email}`}
+                          accessibilityLabel={`${t("delete")} ${driver.email}`}
                           onPress={(e) => { e.stopPropagation(); setDeletingDriver(driver); }}
                           style={[styles.iconButton, { borderColor: "#D3505D", backgroundColor: "rgba(211,80,93,0.14)" }]}
                         >
-                          <Text style={[styles.iconLabel, { color: "#C23A48" }]}>Del</Text>
+                          <Text style={[styles.iconLabel, { color: "#C23A48" }]}>{t("delete")}</Text>
                         </Pressable>
                       </View>
                     </View>

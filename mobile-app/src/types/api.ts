@@ -103,6 +103,7 @@ export type TripDetail = Trip & {
   decision_source?: string | null;
   raw_deleted?: boolean | null;
   already_processed?: boolean | null;
+  ml_blend_weight?: number | null;
   reasons: string[];
   events: DrivingEvent[];
   breakdown: Record<string, unknown>;
@@ -115,6 +116,7 @@ export type FinalizeTrip = {
   score: number | null;
   risk_level?: string | null;
   risk_probability?: number | null;
+  ml_blend_weight?: number | null;
   confidence?: number | null;
   confidence_band?: string | null;
   confidence_display?: string | null;
@@ -138,6 +140,7 @@ export type ReviewDashboardItem = {
   score?: number | null;
   risk_level?: string | null;
   risk_probability?: number | null;
+  ml_blend_weight?: number | null;
   confidence?: number | null;
   confidence_band?: string | null;
   confidence_display?: string | null;
@@ -164,6 +167,7 @@ export type ReviewTrip = {
   score?: number | null;
   risk_level?: string | null;
   risk_probability?: number | null;
+  ml_blend_weight?: number | null;
   confidence?: number | null;
   confidence_band?: string | null;
   confidence_display?: string | null;

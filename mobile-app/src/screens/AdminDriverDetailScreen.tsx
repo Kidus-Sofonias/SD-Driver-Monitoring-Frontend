@@ -6,6 +6,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { SkeletonCard } from "../components/SkeletonShimmer";
 import { TextField } from "../components/TextField";
 import { formatDateTime, formatWholeNumber, titleCase } from "../lib/format";
+import { useI18n } from "../i18n";
 import { useApp } from "../state/AppContext";
 import { radius, spacing, type } from "../theme/tokens";
 import { useThemeColors } from "../theme/useTheme";
@@ -25,6 +26,7 @@ function renderDelta(value: number | null) {
 
 export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
   const colors = useThemeColors();
+  const { t } = useI18n();
   const {
     busy,
     deleteAdminDriver,
@@ -79,7 +81,7 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
   if (!selectedAdminDriver) {
     return (
       <Card>
-        <Text style={[styles.emptyText, { color: colors.muted }]}>Choose a driver from the directory to manage their account.</Text>
+        <Text style={[styles.emptyText, { color: colors.muted }]}>{t("choose_driver_from_directory")}</Text>
       </Card>
     );
   }
@@ -106,8 +108,8 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
         tripBarHeight: Math.max(10, (point.trip_count / maxTripCount) * innerHeight),
       };
     });
-    const chartTitle = selectedTrendView === "weekly" ? "Weekly trend" : "Monthly trend";
-    const chartSubtitle = selectedTrendView === "weekly" ? "Last 8 weeks" : "Last 6 months";
+    const chartTitle = selectedTrendView === "weekly" ? t("weekly_trend") : t("monthly_trend");
+    const chartSubtitle = selectedTrendView === "weekly" ? t("last_8_weeks") : t("last_6_months");
 
     return (
       <View style={[styles.trendCard, { backgroundColor: colors.panelRaised, borderColor: colors.line }]}>
@@ -140,19 +142,19 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
 
         <View style={styles.trendMetrics}>
           <View style={styles.trendMetric}>
-            <Text style={[styles.summaryLabel, { color: colors.muted }]}>Current avg</Text>
+            <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t("current_avg")}</Text>
             <Text style={[styles.trendMetricValue, { color: colors.heading }]}>
               {window.current.average_score !== null ? Math.round(window.current.average_score) : "--"}
             </Text>
           </View>
           <View style={styles.trendMetric}>
-            <Text style={[styles.summaryLabel, { color: colors.muted }]}>Previous avg</Text>
+            <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t("previous_avg")}</Text>
             <Text style={[styles.trendMetricValue, { color: colors.heading }]}>
               {window.previous.average_score !== null ? Math.round(window.previous.average_score) : "--"}
             </Text>
           </View>
           <View style={styles.trendMetric}>
-            <Text style={[styles.summaryLabel, { color: colors.muted }]}>Trips in period</Text>
+            <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t("trips_in_period")}</Text>
             <Text style={[styles.trendMetricValue, { color: colors.heading }]}>{formatWholeNumber(window.current.trip_count)}</Text>
           </View>
         </View>
@@ -236,11 +238,11 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
           <View style={styles.graphLegendRow}>
             <View style={styles.graphLegendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: colors.accentStrong }]} />
-              <Text style={[styles.tripSubtle, { color: colors.muted }]}>Average safety score</Text>
+              <Text style={[styles.tripSubtle, { color: colors.muted }]}>{t("average_safety_score")}</Text>
             </View>
             <View style={styles.graphLegendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: "rgba(120,136,160,0.24)" }]} />
-              <Text style={[styles.tripSubtle, { color: colors.muted }]}>Trips in each period</Text>
+              <Text style={[styles.tripSubtle, { color: colors.muted }]}>{t("trips_in_each_period")}</Text>
             </View>
           </View>
         </View>
@@ -273,21 +275,21 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
       <Card style={[styles.hero, { backgroundColor: colors.darkSurfaceDeep }]}>
         <View style={styles.heroHeader}>
           <View style={styles.heroCopy}>
-            <Text style={styles.heroEyebrow}>DRIVER RECORD</Text>
+            <Text style={styles.heroEyebrow}>{t("driver_record").toUpperCase()}</Text>
             <Text style={styles.heroTitle}>{driver.email}</Text>
           </View>
           <View style={styles.heroActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Edit driver credentials"
+              accessibilityLabel={t("edit_credentials")}
               onPress={() => setEditingCredentials(true)}
               style={[styles.iconButton, { borderColor: "#4F90D9", backgroundColor: "rgba(79,144,217,0.16)" }]}
             >
-              <Text style={styles.iconButtonLabel}>Edit</Text>
+              <Text style={styles.iconButtonLabel}>{t("edit")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Delete driver"
+              accessibilityLabel={t("delete_driver")}
               onPress={() => setConfirmingDelete(true)}
               style={[styles.iconButton, { borderColor: "#D3505D", backgroundColor: "rgba(211,80,93,0.16)" }]}
             >
@@ -297,19 +299,19 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
         </View>
         <View style={styles.summaryRow}>
           <View style={styles.summaryTile}>
-            <Text style={styles.summaryLabel}>Overall score</Text>
+            <Text style={styles.summaryLabel}>{t("overall_score")}</Text>
             <Text style={styles.summaryValue}>{displayedOverallScore ?? "--"}</Text>
           </View>
           <View style={styles.summaryTile}>
-            <Text style={styles.summaryLabel}>Scored trips</Text>
+            <Text style={styles.summaryLabel}>{t("scored_trips")}</Text>
             <Text style={styles.summaryValue}>{selectedAdminDriverInsights?.scored_trip_count ?? driver.trip_count}</Text>
           </View>
           <View style={styles.summaryTile}>
-            <Text style={styles.summaryLabel}>Last trip</Text>
+            <Text style={styles.summaryLabel}>{t("last_trip_label")}</Text>
             <Text style={styles.summaryMeta}>{formatDateTime(driver.latest_trip_at)}</Text>
           </View>
           <View style={styles.summaryTile}>
-            <Text style={styles.summaryLabel}>High-risk trips</Text>
+            <Text style={styles.summaryLabel}>{t("high_risk_trips")}</Text>
             <Text style={styles.summaryValue}>{selectedAdminDriverInsights?.high_risk_trip_count ?? 0}</Text>
           </View>
         </View>
@@ -319,8 +321,8 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
         <Card>
           <View style={styles.headerRow}>
             <View>
-              <Text style={[styles.eyebrow, { color: colors.muted }]}>Improvement tracking</Text>
-              <Text style={[styles.title, { color: colors.heading }]}>Driver trend graph</Text>
+              <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("improvement_tracking")}</Text>
+              <Text style={[styles.title, { color: colors.heading }]}>{t("driver_trend_graph")}</Text>
             </View>
             <View style={styles.chartActions}>
               <Pressable
@@ -333,7 +335,7 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
                   },
                 ]}
               >
-                <Text style={[styles.toggleChipText, { color: selectedTrendView === "weekly" ? colors.accentStrong : colors.text }]}>Weekly</Text>
+                <Text style={[styles.toggleChipText, { color: selectedTrendView === "weekly" ? colors.accentStrong : colors.text }]}>{t("weekly")}</Text>
               </Pressable>
               <Pressable
                 onPress={() => setSelectedTrendView("monthly")}
@@ -345,14 +347,12 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
                   },
                 ]}
               >
-                <Text style={[styles.toggleChipText, { color: selectedTrendView === "monthly" ? colors.accentStrong : colors.text }]}>Monthly</Text>
+                <Text style={[styles.toggleChipText, { color: selectedTrendView === "monthly" ? colors.accentStrong : colors.text }]}>{t("monthly")}</Text>
               </Pressable>
-              <PrimaryButton label="Maximize graph" onPress={() => setChartExpanded(true)} variant="secondary" />
+              <PrimaryButton label={t("maximize_graph")} onPress={() => setChartExpanded(true)} variant="secondary" />
             </View>
           </View>
-          <Text style={[styles.chartHint, { color: colors.muted }]}>
-            Switch between weekly and monthly views. Expand the graph when you want more room to inspect the trend.
-          </Text>
+          <Text style={[styles.chartHint, { color: colors.muted }]}>{t("trend_chart_hint")}</Text>
           {activeTrendWindow ? renderTrendChart(activeTrendWindow) : null}
         </Card>
       ) : null}
@@ -360,10 +360,10 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
       <Card>
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.eyebrow, { color: colors.muted }]}>Trip history</Text>
-            <Text style={[styles.title, { color: colors.heading }]}>All driver trips</Text>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("trip_history")}</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("all_driver_trips")}</Text>
           </View>
-          <PrimaryButton label="Back to drivers" onPress={onBack} variant="secondary" />
+          <PrimaryButton label={t("back_to_drivers")} onPress={onBack} variant="secondary" />
         </View>
 
         <View style={styles.tripList}>
@@ -373,15 +373,15 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
                   <View style={styles.tripMeta}>
                     <Text style={[styles.tripLabel, { color: colors.heading }]}>{trip.id.slice(0, 8)}...</Text>
                     <Text style={[styles.tripSubtle, { color: colors.muted }]}>
-                      Started {formatDateTime(trip.started_at)}
+                      {t("started_time", { time: formatDateTime(trip.started_at) })}
                     </Text>
                     <Text style={[styles.tripSubtle, { color: colors.muted }]}>
-                      Finished {formatDateTime(trip.ended_at)}
+                      {t("finished_time", { time: formatDateTime(trip.ended_at) })}
                     </Text>
                   </View>
                   <View style={styles.tripStats}>
                     <Text style={[styles.tripBadge, { color: colors.heading }]}>
-                      Score {trip.score ?? "--"}
+                      {t("score_badge", { score: trip.score ?? "--" })}
                     </Text>
                     <Text style={[styles.tripSubtle, { color: colors.text }]}>
                       {titleCase(trip.risk_level || trip.status)}
@@ -390,7 +390,7 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
               </Pressable>
             ))
           ) : (
-            <Text style={[styles.emptyText, { color: colors.muted }]}>This driver has no scored trips yet.</Text>
+            <Text style={[styles.emptyText, { color: colors.muted }]}>{t("no_scored_trips_for_driver")}</Text>
           )}
         </View>
       </Card>
@@ -398,19 +398,19 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
       <Modal visible={editingCredentials} animationType="fade" transparent onRequestClose={() => setEditingCredentials(false)}>
         <Pressable style={styles.modalScrim} onPress={() => setEditingCredentials(false)}>
           <Pressable style={[styles.modalCard, { backgroundColor: colors.panel, borderColor: colors.line }]} onPress={() => undefined}>
-            <Text style={[styles.title, { color: colors.heading }]}>Edit driver credentials</Text>
-            <TextField label="Email" value={email} onChangeText={setEmail} placeholder="driver@example.com" />
+            <Text style={[styles.title, { color: colors.heading }]}>{t("edit_credentials")}</Text>
+            <TextField label={t("email")} value={email} onChangeText={setEmail} placeholder={t("driver_email_placeholder")} />
             <TextField
-              label="New password"
+              label={t("new_password")}
               value={password}
               onChangeText={setPassword}
-              placeholder="Leave blank to keep current password"
+              placeholder={t("leave_blank_keep_password")}
               secureTextEntry
               allowPasswordToggle
             />
             <View style={styles.actionRow}>
-              <PrimaryButton label="Cancel" onPress={() => setEditingCredentials(false)} variant="secondary" />
-              <PrimaryButton label="Save" onPress={() => void handleSave()} loading={busy} />
+              <PrimaryButton label={t("cancel")} onPress={() => setEditingCredentials(false)} variant="secondary" />
+              <PrimaryButton label={t("save")} onPress={() => void handleSave()} loading={busy} />
             </View>
           </Pressable>
         </Pressable>
@@ -419,13 +419,13 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
       <Modal visible={confirmingDelete} animationType="fade" transparent onRequestClose={() => setConfirmingDelete(false)}>
         <Pressable style={styles.modalScrim} onPress={() => setConfirmingDelete(false)}>
           <Pressable style={[styles.modalCard, { backgroundColor: colors.panel, borderColor: colors.line }]} onPress={() => undefined}>
-            <Text style={[styles.title, { color: colors.heading }]}>Delete driver</Text>
+            <Text style={[styles.title, { color: colors.heading }]}>{t("delete_driver")}</Text>
             <Text style={[styles.modalText, { color: colors.muted }]}>
-              Delete {driver.email} and all their trips? This action cannot be undone.
+              {t("delete_driver_confirm", { email: driver.email })}
             </Text>
             <View style={styles.actionRow}>
-              <PrimaryButton label="Cancel" onPress={() => setConfirmingDelete(false)} variant="secondary" />
-              <PrimaryButton label="Delete" onPress={() => void handleDelete()} loading={busy} variant="danger" />
+              <PrimaryButton label={t("cancel")} onPress={() => setConfirmingDelete(false)} variant="secondary" />
+              <PrimaryButton label={t("delete")} onPress={() => void handleDelete()} loading={busy} variant="danger" />
             </View>
           </Pressable>
         </Pressable>
@@ -436,12 +436,12 @@ export function AdminDriverDetailScreen({ onBack, onOpenTrip }: Props) {
           <Pressable style={[styles.chartModalCard, { backgroundColor: colors.panel, borderColor: colors.line }]} onPress={() => undefined}>
             <View style={styles.headerRow}>
               <View>
-                <Text style={[styles.eyebrow, { color: colors.muted }]}>Expanded analysis</Text>
+                <Text style={[styles.eyebrow, { color: colors.muted }]}>{t("expanded_analysis")}</Text>
                 <Text style={[styles.title, { color: colors.heading }]}>
-                  {selectedTrendView === "weekly" ? "Weekly graph" : "Monthly graph"}
+                  {selectedTrendView === "weekly" ? t("weekly_graph") : t("monthly_graph")}
                 </Text>
               </View>
-              <PrimaryButton label="Close" onPress={() => setChartExpanded(false)} variant="secondary" />
+              <PrimaryButton label={t("close")} onPress={() => setChartExpanded(false)} variant="secondary" />
             </View>
             {activeTrendWindow ? renderTrendChart(activeTrendWindow, { expanded: true }) : null}
           </Pressable>

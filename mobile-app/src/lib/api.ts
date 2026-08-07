@@ -148,11 +148,22 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
     try {
       const errorData = rawError ? JSON.parse(rawError) : null;
-      message =
-        (typeof errorData?.detail === "string" && errorData.detail) ||
-        (typeof errorData?.message_key === "string" && errorData.message_key) ||
-        rawError ||
-        fallback;
+      // Backend returns custom ErrorResponse: { ok: false, error: { message_key, details }, request_id }
+      // FastAPI's HTTPException: { detail: string | object }
+      const nestedError = errorData?.error;
+      if (typeof errorData?.detail === "string") {
+        message = errorData.detail;
+      } else if (typeof nestedError?.message_key === "string") {
+        message = nestedError.details
+          ? `${nestedError.message_key} — ${JSON.stringify(nestedError.details)}`
+          : nestedError.message_key;
+      } else if (typeof errorData?.detail === "object" && errorData.detail !== null) {
+        message = errorData.detail.message || JSON.stringify(errorData.detail);
+      } else if (errorData?.request_id) {
+        message = `Server error (${errorData.request_id.slice(0, 8)}…)`;
+      } else {
+        message = rawError || fallback;
+      }
     } catch {
       message = rawError || fallback;
     }
