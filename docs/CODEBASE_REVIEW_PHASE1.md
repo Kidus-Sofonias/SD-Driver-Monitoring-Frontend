@@ -389,3 +389,13 @@ mobile-app restructure`), then commit each phase on top.
 5. **Phase 8 — Accident detection** (impact/spike detection + confirmation heuristics, admin alerts).
 6. **Phase 9 — ML retraining** (dataset rebuild on new features, hyperparameter tuning, calibration
    gates, blend-weight validation, ≥80% target, documented evaluation).
+
+---
+
+## 15. Phase 2 resolution status (added 2026-08-07)
+
+Phase 2 (see [PHASE2_FIXES.md](./PHASE2_FIXES.md)) resolved: **CRIT-1** (single-sample events now
+counted), **CRIT-2** (NaN-safe finalization), **CRIT-3** (no fabricated zero-speed events), **CRIT-4**
+(speed_variation double counting removed), **H-4** (event ownership enforced), **H-5** (pagination),
+**H-6** (insufficient-sample trips preserved, no GET side effects), and **H-7** (active-only uploads +
+rate limiting). Open items are tagged for Phases 3–9 in the issue list above.
