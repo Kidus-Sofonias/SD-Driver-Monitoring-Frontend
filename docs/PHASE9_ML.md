@@ -85,6 +85,25 @@ up from ~0.49 before.
 
 ## 5. Reprocessing Historical Trips (Phase 4 consistency)
 
+**Executed against the live Supabase DB** (`aws-0-eu-west-1.pooler.supabase.com`)
+on 2026-08-08 — all 69 previously processed trips were re-scored with
+`force_reprocess=True` in parallel batches (~15 s/trip, per-trip atomic commits).
+
+| Metric | Before | After |
+|---|---|---|
+| Scored trips | 55 | 55 |
+| Trips using ML model | 0 (`rules_v1` fallback only) | 54 (`lr_20260807T231713Z`) |
+| Mean score | 32.9 | 42.8 |
+| Median score | 19.0 | 61.0 |
+| Risk bands low / med / high | 5 / 10 / 40 | 11 / 14 / 30 |
+
+Notable: before this run, **every live trip had `model_version = rules_v1`** —
+ML inference had never activated in production. After reprocessing, 54/55
+scored trips use the ML model. The single remaining `rules_v1` trip has
+`confidence = 0.35 < 0.5`, so the ML branch is correctly skipped by design
+(low-confidence data leans on rules). The 14 sample-less trips stay
+"not enough samples".
+
 Re-score every stored trip with the new model/blend so historical data stays
 consistent with the Phase 9 methodology:
 
@@ -121,3 +140,53 @@ are preserved and re-evaluated.
 | `app/services/trip_processing_service.py` | Blend constants raised (0.40 base / 0.65 ceiling) |
 | `tests/test_trip_processing_service.py` | Blend expectation updated for new base |
 | `artifacts/models/…lr_20260807T231713Z*` | Promoted model + metadata (gitignored, runtime artifacts) |
+| `scripts/benchmark_models.py` | Competence benchmark vs RF/SVM/k-NN/NB/DT on identical CV splits |
+| `mobile-app/jest.config.js`, `jest.setup.js` | Jest harness + in-memory AsyncStorage mock |
+| `mobile-app/src/lib/__tests__/uploadQueue.test.ts` | 10 unit tests for the durable outbox |
+
+## 8. Model Competence Benchmark (`scripts/benchmark_models.py`)
+
+To verify the promoted model is genuinely competent rather than just
+internally consistent, it was benchmarked against a wider field of classifiers
+on the **same stratified 5-fold splits** and the same out-of-fold threshold
+tuning. All models share the pipeline helpers from `train_model_v2.py`.
+
+| Model | Risky-F1 | Acc | Prec | Rec | FPR | FNR | Brier | ROC-AUC | PR-AUC | Thr |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **lr (PRODUCTION)** | **1.000** | **1.000** | **1.000** | **1.000** | **0.000** | **0.000** | 0.0009 | 1.000 | 1.000 | 0.30 |
+| gb | 0.981 | 0.981 | 0.963 | 1.000 | 0.036 | 0.000 | 0.0171 | 0.999 | 0.999 | 0.30 |
+| rf | 0.981 | 0.981 | 0.963 | 1.000 | 0.036 | 0.000 | 0.0094 | 1.000 | 1.000 | 0.55 |
+| svm | 0.962 | 0.963 | 0.962 | 0.962 | 0.036 | 0.038 | 0.0147 | 0.999 | 0.999 | 0.30 |
+| knn | 1.000 | 1.000 | 1.000 | 1.000 | 0.000 | 0.000 | 0.0000 | 1.000 | 1.000 | 0.30 |
+| nb | 1.000 | 1.000 | 1.000 | 1.000 | 0.000 | 0.000 | 0.0000 | 1.000 | 1.000 | 0.30 |
+| dt | 0.962 | 0.963 | 0.962 | 0.962 | 0.036 | 0.038 | 0.0370 | 0.963 | 0.943 | 0.30 |
+
+Report: `artifacts/reports/benchmark_models.json`.
+
+**Interpretation** — the model is competent, with an honest caveat:
+
+- **All 7 classifiers clear the 80% risky-F1 target**; LR is top-ranked on
+  risky-F1 (tied 1.0 with k-NN and NB). This is expected on the current 54-row
+  dataset, whose labels are derived deterministically from the rule features —
+  every reasonable model finds the same clean signal. Model choice matters
+  little at this data size; it will matter more once real reviewed labels
+  (currently `reviewed_real_subset: 0 rows`) accumulate.
+- LR is retained because it is the **smallest, most naturally calibrated**
+  candidate with identical separation, and its probabilities feed the adaptive
+  blend weight directly.
+- Published literature context (UAH-DriveSet-based studies): SVM ~96% acc /
+  0.96 F1 (Silva & Naranjo 2020); Random Forest 90–96% acc / 0.91–0.93 F1;
+  k-NN 70–88%; logistic-regression baselines 65–80%. Our OOF results (1.0
+  risky-F1, Brier 0.0009) sit at the top of that range — with the caveat that
+  the comparison datasets are far larger and noisier (real naturalistic
+  driving), so on real data the expectation should be a strong but
+  sub-perfect model.
+
+## 9. Test Coverage Added
+
+- **Backend** — full suite: **91 passed**.
+- **Mobile upload queue** — new jest harness (`jest-expo` preset + in-memory
+  AsyncStorage mock): **10/10 tests pass**, covering FIFO enqueue/peek/dequeue,
+  per-trip cap eviction, trip isolation, clear operations, empty-queue no-op,
+  and corrupt-storage recovery.
+- **Mobile TypeScript**: clean (`tsc --noEmit`).
